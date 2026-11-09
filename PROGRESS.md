@@ -537,13 +537,42 @@ penyelesaian → hasil, ditambah bagian persiapan tanya-jawab presentasi.
 
 **Alasan:** permintaan kelompok agar kendala dan cara penyelesaiannya masuk ke laporan sebagai nilai tambah,
 dan sebagai bekal jika diminta presentasi. Semua angka di dokumen tersebut sudah dicek ulang ke folder
-`results/` dan notebook.
+`results/` dan notebook. Notebook 05 dan dokumen ini sudah di-push (commit 63d5721).
+
+---
+
+## 2026-11-09 — Lisensi dataset dan unduh otomatis
+
+**Pertanyaan kelompok:** mengapa dataset tidak di-push saja agar anggota lain tinggal menjalankan notebook?
+
+**Temuan:** README resmi MovieLens 100K memuat ketentuan "The user may not redistribute the data without
+separate permission". Repository kami public, sehingga mengunggah dataset berarti menyebarkannya ulang.
+Menjadikan repository private pun tetap berarti membagikan salinan ke anggota dan dosen, jadi secara
+harfiah masih termasuk penyebaran ulang.
+
+**Keputusan:** dataset tetap tidak di-push. Sebagai gantinya, `src/data.py` mendapat fungsi `ensure_data()`
+yang mengunduh dataset dari situs resmi GroupLens saat pertama kali dibutuhkan, mencocokkan SHA-256-nya
+dengan file resmi, lalu mengekstraknya ke `data/ml-100k/`. Bagi anggota kelompok, notebook tinggal dijalankan
+dengan *Run All* tanpa langkah unduh manual.
+
+**Pengujian:**
+- Folder `data/` dipindahkan sementara, lalu `load_ratings`, `load_fold`, dan `load_items` dijalankan.
+  Dataset terunduh otomatis dan isinya identik dengan dataset sebelumnya (dicek dengan `diff -r`).
+- Pemanggilan kedua tidak mengunduh ulang.
+- File zip palsu ditolak dengan pesan error (SHA-256 berbeda) dan otomatis dihapus.
+
+**Kewajiban sitasi:** lisensi yang sama mewajibkan setiap tulisan yang memakai dataset ini mencantumkan
+Harper & Konstan (2015), *The MovieLens Datasets: History and Context*, ACM TiiS 5(4), Article 19,
+https://doi.org/10.1145/2827872. Sitasi ini **wajib masuk daftar pustaka laporan**. Sudah ditambahkan ke
+README bersama bagian Referensi.
 
 ---
 
 ## Langkah berikutnya
 
-1. Push notebook 05 dan dokumen masalah ke GitHub (hasil MF sudah di-push, commit 7c9cf6a).
-2. Membagi penulisan bab laporan ke anggota kelompok (opsional: folder `laporan/` berisi template per bab,
+1. Membagi penulisan bab laporan ke anggota kelompok (opsional: folder `laporan/` berisi template per bab,
    dikerjakan langsung di GitHub agar setiap anggota tercatat sebagai kontributor).
-3. Laporan PDF, dengan bab khusus "Kendala dan Penyelesaian" dari MASALAH_DAN_PENYELESAIAN.md.
+2. Laporan PDF, dengan bab khusus "Kendala dan Penyelesaian" dari MASALAH_DAN_PENYELESAIAN.md, dan daftar
+   pustaka yang memuat sitasi wajib MovieLens.
+3. (Belum dikerjakan) Menguji kode dengan pandas 2.x, versi yang biasa terpasang di Anaconda. Saat ini kode
+   baru diuji dengan pandas 3.0.5 dan numpy 2.2.

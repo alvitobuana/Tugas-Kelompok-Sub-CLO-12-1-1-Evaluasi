@@ -31,15 +31,20 @@ setiap rumus diuji dengan contoh hitungan dari slide.
 (skala 1–5) dari 943 user untuk 1.682 film, lengkap dengan timestamp. Setiap user memiliki minimal 20 rating.
 Evaluasi memakai pembagian 5-fold bawaan dataset (`u1.base/u1.test` sampai `u5.base/u5.test`).
 
-Dataset tidak disertakan di repository ini. Unduh dan ekstrak ke folder `data/`:
+Dataset **tidak disertakan** di repository ini karena lisensi MovieLens melarang penyebaran ulang
+("The user may not redistribute the data without separate permission"). Dataset **diunduh otomatis** dari
+situs resmi GroupLens saat notebook atau kode pertama kali dijalankan, lalu diekstrak ke `data/ml-100k/`.
+Isi file unduhan dicocokkan dengan SHA-256 file resmi, sehingga semua anggota memakai data yang sama persis.
 
-```bash
-mkdir -p data
-curl -L -o data/ml-100k.zip https://files.grouplens.org/datasets/movielens/ml-100k.zip
-python -c "import zipfile; zipfile.ZipFile('data/ml-100k.zip').extractall('data')"
-```
+Jika komputer tidak terhubung ke internet, unduh manual
+[ml-100k.zip](https://files.grouplens.org/datasets/movielens/ml-100k.zip) dan ekstrak ke folder `data/`
+sehingga terdapat file `data/ml-100k/u.data`.
 
-Setelah diekstrak, file rating berada di `data/ml-100k/u.data`.
+Sesuai ketentuan lisensi, penggunaan dataset ini dalam tulisan wajib mencantumkan:
+
+> F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context.
+> *ACM Transactions on Interactive Intelligent Systems (TiiS)* 5, 4, Article 19 (December 2015), 19 pages.
+> https://doi.org/10.1145/2827872
 
 ## Struktur Repository
 
@@ -87,8 +92,13 @@ Menjalankan pengujian (memastikan rumus sama dengan contoh di slide):
 .venv/Scripts/python tests/test_baseline.py
 ```
 
-Notebook dapat dibuka dengan Jupyter (`.venv/Scripts/python -m jupyter notebook`) dan dijalankan berurutan
-dari 01. Semua notebook sudah berisi output hasil eksekusi.
+Notebook dapat dibuka dengan Jupyter (`.venv/Scripts/python -m jupyter notebook`) atau Jupyter dari
+Anaconda/VS Code, lalu dijalankan dengan *Run All*. Setiap notebook bisa dijalankan sendiri-sendiri; dataset
+akan diunduh otomatis pada notebook pertama yang dijalankan. Notebook 04 dan 05 butuh sekitar 4–5 menit
+karena melatih matrix factorization di 5 fold.
+
+Untuk sekadar membaca hasil, notebook tidak perlu dijalankan: semua notebook sudah berisi output dan grafik
+dan bisa dibuka langsung di GitHub.
 
 ## Metrik Evaluasi
 
@@ -120,3 +130,16 @@ Ringkasan temuan:
 
 Penjelasan lengkap setiap langkah, keputusan, dan analisis ada di notebook, [PROGRESS.md](PROGRESS.md), dan
 [MASALAH_DAN_PENYELESAIAN.md](MASALAH_DAN_PENYELESAIAN.md).
+
+## Referensi
+
+- Harper, F. M., & Konstan, J. A. (2015). The MovieLens Datasets: History and Context. *ACM Transactions on
+  Interactive Intelligent Systems*, 5(4), Article 19. https://doi.org/10.1145/2827872
+- Jannach, D., Zanker, M., Felfernig, A., & Friedrich, G. (2010). *Recommender Systems: An Introduction*.
+  Cambridge University Press.
+- Sarwar, B., Karypis, G., Konstan, J., & Riedl, J. (2001). Item-based collaborative filtering recommendation
+  algorithms. *Proceedings of the 10th International Conference on World Wide Web*, 285–295.
+- Ricci, F., Rokach, L., & Shapira, B. (2011). Introduction to Recommender Systems Handbook. Dalam
+  *Recommender Systems Handbook*. Springer.
+- Materi kuliah Sistem Rekomendasi: User-Based CF, Item-Based CF, Matrix Factorization, dan Evaluasi
+  Sistem Rekomendasi (ZK Abdurahman Baizal, Agung Toto Wibowo).

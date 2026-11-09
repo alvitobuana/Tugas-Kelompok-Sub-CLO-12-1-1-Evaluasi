@@ -390,6 +390,13 @@ Tugas meminta penjelasan langkah-langkah metode. Dengan menulis sendiri, setiap 
 diuji dengan contoh slide, dan dimodifikasi (misalnya menambah significance weighting atau mengganti
 cara inisialisasi MF), sesuatu yang lebih sulit dilakukan jika memakai library siap pakai.
 
+**Mengapa dataset tidak ada di repository?**
+Lisensi MovieLens melarang penyebaran ulang dataset tanpa izin ("The user may not redistribute the data
+without separate permission"). Karena itu dataset tidak diunggah. Sebagai gantinya, kode mengunduh dataset
+otomatis dari situs resmi GroupLens saat pertama kali dijalankan dan mencocokkannya dengan SHA-256 file resmi,
+sehingga siapa pun yang menjalankan kode memakai data yang sama persis. Lisensi yang sama juga mewajibkan
+sitasi Harper & Konstan (2015), yang kami cantumkan di daftar pustaka.
+
 **Mengapa memakai Jupyter Notebook?**
 Soal tugas meminta penjelasan langkah-langkah metode beserta screenshot source code yang dijelaskan.
 Notebook menampilkan tiga hal dalam satu tempat: penjelasan (teks dan rumus), kode, dan hasilnya tepat di
