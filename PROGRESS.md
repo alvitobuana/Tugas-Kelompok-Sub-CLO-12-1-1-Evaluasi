@@ -19,7 +19,7 @@ Data anggota kelompok: lihat [README.md](README.md).
 | User-based CF | Selesai (9 Nov 2026), `notebooks/02_user_based_cf.ipynb` |
 | Item-based CF | Selesai (9 Nov 2026), `notebooks/03_item_based_cf.ipynb` |
 | Matrix Factorization | Selesai (9 Nov 2026), `notebooks/04_matrix_factorization.ipynb` |
-| Perbandingan akhir ketiga metode | Belum |
+| Perbandingan akhir ketiga metode | Selesai (9 Nov 2026), `notebooks/05_perbandingan.ipynb` |
 | Repo GitHub + README | Push pertama 9 Nov 2026 (UBCF, IBCF, kode MF); repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi |
 | Share repo ke dosen | Repo dibiarkan public (keputusan 9 Nov 2026), jadi dosen bisa membuka link tanpa undangan |
 | Laporan PDF | Belum |
@@ -151,6 +151,7 @@ tidak ikut berubah) dan memasang library dari `requirements.txt`, termasuk Jupyt
 | `src/metrics.py` | MAE, MSE, RMSE, NMSE, NDCG@l sesuai rumus slide |
 | `src/ubcf.py` | User-based CF |
 | `src/ibcf.py` | Item-based CF |
+| `src/baseline.py` | Baseline pembanding (acak, rata-rata global/user/film) |
 | `src/mf.py` | Matrix factorization (SGD) |
 | `scripts/mf_tuning.py` | Pemilihan hyperparameter MF dengan data validasi |
 | `src/plot_style.py` | Gaya grafik laporan |
@@ -161,6 +162,16 @@ tidak ikut berubah) dan memasang library dari `requirements.txt`, termasuk Jupyt
 
 **Alasan memisah kode (`src/`) dan notebook:** rumus cukup ditulis sekali di `src/`, lalu dipakai ulang
 oleh ketiga notebook dan oleh pengujian. Notebook fokus pada penjelasan langkah dan hasil.
+
+**Alasan memakai Jupyter Notebook:**
+1. Soal tugas meminta penjelasan langkah dan screenshot source code yang dijelaskan. Notebook menampilkan
+   penjelasan, kode, dan hasil dalam satu tempat, sehingga satu screenshot sudah memuat kode dan hasilnya.
+2. Sejalan dengan slide M04 yang meminta kode MF dijalankan di Google Colab (Jupyter Notebook versi online).
+3. Output dan grafik tersimpan di dalam notebook, sehingga bisa dibaca langsung di GitHub tanpa dijalankan.
+
+Kelemahan notebook diantisipasi dengan: rumus inti di `src/` (bisa dipakai ulang), pengujian di `tests/`,
+semua notebook dijalankan ulang dari sel pertama sampai terakhir sebelum disimpan (hasil konsisten), dan
+proses berat (tuning MF) dipisah ke `scripts/`.
 
 ---
 
@@ -462,12 +473,77 @@ Cara menjalankan ulang:
     .venv\Scripts\python tests\test_ubcf.py
     .venv\Scripts\python tests\test_ibcf.py
     .venv\Scripts\python tests\test_mf.py
+    .venv\Scripts\python tests\test_baseline.py
     .venv\Scripts\python scripts\mf_tuning.py     (opsional, ±25 menit, hasilnya sudah ada di results/)
+
+---
+
+## 2026-11-09 — Perbandingan akhir (notebook 05)
+
+**Yang dilakukan:** ketiga metode dan empat baseline (`src/baseline.py`: tebak acak, rata-rata global,
+rata-rata user, rata-rata film) dijalankan ulang di kelima fold. Hasil ketiga metode identik dengan notebook
+02–04 (diperiksa otomatis di notebook).
+
+**Alasan menambah baseline:** angka seperti MAE 0,73 atau NDCG 0,85 tidak bermakna tanpa patokan. Baseline
+menunjukkan seberapa besar manfaat nyata dari metode yang lebih rumit.
+
+**Tabel akhir (rata-rata ± simpangan baku 5 fold):**
+
+| Metode | MAE | MSE | RMSE | NMSE | NDCG@10 |
+|---|---|---|---|---|---|
+| Tebak acak | 1,3902 ± 0,0167 | 2,8901 ± 0,0634 | 1,6999 ± 0,0186 | 0,7225 ± 0,0158 | 0,6839 ± 0,0275 |
+| Rata-rata global | 0,9447 ± 0,0146 | 1,2672 ± 0,0394 | 1,1256 ± 0,0174 | 0,3168 ± 0,0099 | 0,7366 ± 0,0177 |
+| Rata-rata user | 0,8362 ± 0,0090 | 1,0895 ± 0,0250 | 1,0437 ± 0,0119 | 0,2724 ± 0,0062 | 0,7366 ± 0,0177 |
+| Rata-rata film | 0,8174 ± 0,0068 | 1,0498 ± 0,0146 | 1,0246 ± 0,0071 | 0,2624 ± 0,0036 | 0,8329 ± 0,0087 |
+| User-based CF | **0,7342** ± 0,0047 | 0,8901 ± 0,0114 | 0,9434 ± 0,0060 | 0,2225 ± 0,0029 | 0,8474 ± 0,0088 |
+| Item-based CF | 0,7383 ± 0,0086 | 0,8949 ± 0,0207 | 0,9459 ± 0,0109 | 0,2237 ± 0,0052 | 0,8375 ± 0,0064 |
+| Matrix factorization | 0,7357 ± 0,0052 | **0,8554** ± 0,0097 | **0,9249** ± 0,0052 | **0,2138** ± 0,0024 | **0,8578** ± 0,0057 |
+
+**Temuan utama:**
+
+1. **Perbaikan terhadap baseline terkuat (rata-rata film):** MAE turun 9,68–10,18%, RMSE turun 7,67–9,73%,
+   tetapi NDCG@10 hanya naik 0,55–2,99%.
+2. **NDCG sebagian besar "gratis".** Mengurutkan film secara acak sudah memberi NDCG@10 = 0,684, dan
+   mengurutkan berdasarkan rata-rata rating film memberi 0,833. Rata-rata 57,94% film milik setiap user di
+   data uji bernilai relevan (≥ 4).
+3. **Rata-rata global dan rata-rata user punya NDCG identik (0,7366)**, karena keduanya memberi skor sama untuk
+   semua film milik seorang user, sehingga urutannya ditentukan oleh id film. Id film di MovieLens berkorelasi
+   kuat dengan popularitas (Spearman −0,806), sehingga baseline ini tanpa sengaja mengurutkan film populer
+   lebih dulu.
+4. **Uji berpasangan per fold** (`results/uji_berpasangan.csv`): MF menang di kelima fold untuk RMSE (p = 0,0002
+   vs UBCF; p = 0,0020 vs IBCF) dan NDCG@10 (p = 0,0102 dan 0,0008). Untuk MAE tidak ada perbedaan signifikan
+   (p = 0,11–0,41). UBCF vs IBCF hanya berbeda signifikan di NDCG@10 (UBCF menang 5 fold, p = 0,0138).
+   Catatan: dengan hanya 5 fold, uji ini kurang peka, jadi dibaca sebagai petunjuk.
+5. **Sebaran kesalahan** menjelaskan mengapa MF unggul di RMSE tetapi tidak di MAE: MF paling jarang membuat
+   kesalahan ≥ 2 bintang (3,23% vs 4,10% UBCF dan 4,29% IBCF), tetapi juga sedikit lebih jarang membuat
+   tebakan yang sangat tepat (< 0,5 bintang: 41,19% vs 42,74% UBCF).
+6. **Sparsity:** MAE untuk film dengan < 10 rating latih = 0,84–0,92, sedangkan untuk film dengan ≥ 150 rating
+   = 0,70–0,71. IBCF paling terpengaruh pada film jarang (0,9216), tetapi sedikit paling baik pada film
+   populer (0,7036).
+7. **Waktu komputasi per fold:** UBCF 0,93 detik, IBCF 0,78 detik, MF 33,73 detik (hampir seluruhnya untuk
+   pelatihan; prediksi 20.000 rating hanya 0,01 detik).
+8. **Rekomendasi user 1:** MF dan UBCF berbagi 6 dari 10 film, UBCF dan IBCF berbagi 1 (Casablanca), MF dan
+   IBCF tidak berbagi satu pun.
+
+**Grafik baru:** `figures/perbandingan_metrik.png`, `figures/sebaran_error.png`, `figures/error_vs_popularitas.png`.
+
+---
+
+## 2026-11-09 — Dokumen masalah dan penyelesaian
+
+**Yang dilakukan:** membuat [MASALAH_DAN_PENYELESAIAN.md](MASALAH_DAN_PENYELESAIAN.md), berisi 18 masalah (awalnya 15, ditambah 3 dari notebook 05)
+yang ditemukan selama pengerjaan. Setiap masalah ditulis dengan pola masalah → bukti angka → penyebab →
+penyelesaian → hasil, ditambah bagian persiapan tanya-jawab presentasi.
+
+**Alasan:** permintaan kelompok agar kendala dan cara penyelesaiannya masuk ke laporan sebagai nilai tambah,
+dan sebagai bekal jika diminta presentasi. Semua angka di dokumen tersebut sudah dicek ulang ke folder
+`results/` dan notebook.
 
 ---
 
 ## Langkah berikutnya
 
-1. Notebook 05: perbandingan ketiga metode + baseline sederhana (rata-rata user) sebagai pembanding.
-2. Push hasil MF dan notebook 05 ke GitHub.
-3. Laporan PDF.
+1. Push notebook 05 dan dokumen masalah ke GitHub (hasil MF sudah di-push, commit 7c9cf6a).
+2. Membagi penulisan bab laporan ke anggota kelompok (opsional: folder `laporan/` berisi template per bab,
+   dikerjakan langsung di GitHub agar setiap anggota tercatat sebagai kontributor).
+3. Laporan PDF, dengan bab khusus "Kendala dan Penyelesaian" dari MASALAH_DAN_PENYELESAIAN.md.

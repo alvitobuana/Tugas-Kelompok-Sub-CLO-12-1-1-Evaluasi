@@ -50,18 +50,21 @@ src/
   ubcf.py          user-based collaborative filtering
   ibcf.py          item-based collaborative filtering
   mf.py            matrix factorization (SGD)
+  baseline.py      metode pembanding sederhana (acak, rata-rata)
   plot_style.py    gaya grafik
 notebooks/
   01_eda.ipynb                  eksplorasi data
   02_user_based_cf.ipynb        user-based CF, langkah demi langkah
   03_item_based_cf.ipynb        item-based CF, langkah demi langkah
   04_matrix_factorization.ipynb matrix factorization, langkah demi langkah
+  05_perbandingan.ipynb         perbandingan akhir ketiga metode dan baseline
 scripts/
   mf_tuning.py     pemilihan hyperparameter MF dengan data validasi
 tests/             pengujian kode dengan contoh hitungan di slide
 figures/           grafik untuk laporan
 results/           tabel hasil evaluasi (CSV)
 PROGRESS.md        catatan progres dan alasan setiap keputusan
+MASALAH_DAN_PENYELESAIAN.md   kendala yang ditemui dan cara penyelesaiannya
 ```
 
 ## Cara Menjalankan
@@ -81,6 +84,7 @@ Menjalankan pengujian (memastikan rumus sama dengan contoh di slide):
 .venv/Scripts/python tests/test_ubcf.py
 .venv/Scripts/python tests/test_ibcf.py
 .venv/Scripts/python tests/test_mf.py
+.venv/Scripts/python tests/test_baseline.py
 ```
 
 Notebook dapat dibuka dengan Jupyter (`.venv/Scripts/python -m jupyter notebook`) dan dijalankan berurutan
@@ -96,12 +100,23 @@ dari 01. Semua notebook sudah berisi output hasil eksekusi.
 | NMSE | MSE / (r_max − r_min) | MSE dinormalisasi rentang rating (1–5) |
 | NDCG@10 | DCG@10 / IDCG@10 | kualitas urutan rekomendasi; film relevan jika rating aktual ≥ 4 |
 
-## Hasil Sementara (rata-rata 5-fold)
+## Hasil (rata-rata 5-fold)
 
 | Metode | MAE | MSE | RMSE | NMSE | NDCG@10 |
 |---|---|---|---|---|---|
-| User-based CF (Pearson, k = 30) | 0,7342 | 0,8901 | 0,9434 | 0,2225 | 0,8474 |
+| *Baseline: tebak acak* | 1,3902 | 2,8901 | 1,6999 | 0,7225 | 0,6839 |
+| *Baseline: rata-rata user* | 0,8362 | 1,0895 | 1,0437 | 0,2724 | 0,7366 |
+| *Baseline: rata-rata film* | 0,8174 | 1,0498 | 1,0246 | 0,2624 | 0,8329 |
+| User-based CF (Pearson, k = 30) | **0,7342** | 0,8901 | 0,9434 | 0,2225 | 0,8474 |
 | Item-based CF (adjusted cosine, k = 30) | 0,7383 | 0,8949 | 0,9459 | 0,2237 | 0,8375 |
-| Matrix factorization (SGD, K = 100, β = 0,2) | 0,7357 | 0,8554 | 0,9249 | 0,2138 | 0,8578 |
+| Matrix factorization (SGD, K = 100, β = 0,2) | 0,7357 | **0,8554** | **0,9249** | **0,2138** | **0,8578** |
 
-Penjelasan lengkap setiap langkah, keputusan, dan analisis ada di notebook dan di [PROGRESS.md](PROGRESS.md).
+Ringkasan temuan:
+
+- Ketiga metode menurunkan MAE sekitar 10% dan RMSE 7,7–9,7% dibanding baseline terkuat (rata-rata film).
+- Matrix factorization terbaik untuk RMSE dan NDCG@10, menang di kelima fold (uji t berpasangan, p < 0,05).
+- Untuk MAE, ketiga metode praktis setara (selisih ≤ 0,0041, tidak signifikan).
+- Semua metode kesulitan memprediksi film yang jarang dirating (sparsity), terutama item-based CF.
+
+Penjelasan lengkap setiap langkah, keputusan, dan analisis ada di notebook, [PROGRESS.md](PROGRESS.md), dan
+[MASALAH_DAN_PENYELESAIAN.md](MASALAH_DAN_PENYELESAIAN.md).

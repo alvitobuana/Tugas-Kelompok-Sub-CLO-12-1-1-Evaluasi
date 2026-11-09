@@ -1,0 +1,10 @@
+Metrik,Perbandingan,Selisih rata-rata,Fold dimenangkan (dari 5),p-value (uji t berpasangan)
+MAE,Matrix factorization vs User-based CF,0.0014577528760337133,2 : 3,0.4081221553082015
+MAE,Matrix factorization vs Item-based CF,-0.002649974293990898,4 : 1,0.26574119055626405
+MAE,User-based CF vs Item-based CF,-0.004107727170024611,4 : 1,0.10915561024077604
+RMSE,Matrix factorization vs User-based CF,-0.01855873609349721,5 : 0,0.00020846092837929043
+RMSE,Matrix factorization vs Item-based CF,-0.021061317147623937,5 : 0,0.0019824622382064705
+RMSE,User-based CF vs Item-based CF,-0.002502581054126729,3 : 2,0.38389180248632754
+NDCG@10,Matrix factorization vs User-based CF,0.010438063560367606,5 : 0,0.010234358504003145
+NDCG@10,Matrix factorization vs Item-based CF,0.020296587208160456,5 : 0,0.0008022845118525356
+NDCG@10,User-based CF vs Item-based CF,0.00985852364779285,5 : 0,0.013779553309333835
