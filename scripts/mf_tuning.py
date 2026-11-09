@@ -43,18 +43,31 @@ def main():
             if not (K == 20 and beta == 0.02):
                 configs.append(dict(tahap="K dan beta", K=K, alpha=0.01, beta=beta))
     configs.append(dict(tahap="K dan beta", K=20, alpha=0.01, beta=0.02))
+    # Tahap 3: konfigurasi terbaik tahap 2 (K=50, beta=0.1) berada di ujung grid,
+    # jadi grid diperluas ke beta dan K yang lebih besar
+    for K, beta in [(20, 0.2), (50, 0.2), (100, 0.1), (100, 0.2)]:
+        configs.append(dict(tahap="perluasan", K=K, alpha=0.01, beta=beta))
+    # Tahap 4: hasil terbaik tahap 3 (K=100, beta=0.2) masih di ujung grid dan
+    # beberapa titik terbaik dekat epoch 60, jadi diperluas lagi dengan 100 epoch
+    for K, beta in [(50, 0.3), (100, 0.3), (100, 0.5), (200, 0.2), (200, 0.3)]:
+        configs.append(dict(tahap="perluasan 2", K=K, alpha=0.01, beta=beta, epochs=100))
 
-    rows = []
+    out = ROOT / "results" / "mf_tuning.csv"
+    rows = pd.read_csv(out).to_dict("records") if out.exists() else []
+    done = {(r["tahap"], r["K"], r["alpha"], r["beta"]) for r in rows}
     for c in configs:
+        if (c["tahap"], c["K"], c["alpha"], c["beta"]) in done:
+            continue  # sudah pernah dijalankan, hasilnya ada di CSV
         t = time.time()
-        m = MatrixFactorization(K=c["K"], alpha=c["alpha"], beta=c["beta"], epochs=EPOCHS)
+        m = MatrixFactorization(K=c["K"], alpha=c["alpha"], beta=c["beta"],
+                                epochs=c.pop("epochs", EPOCHS))
         m.fit(R_sub, R_val)
         for h in m.history:
             rows.append({**c, **h})
         best = min(m.history, key=lambda h: h["rmse_val"])
         print(f"{c} -> RMSE val terbaik {best['rmse_val']:.4f} di epoch {best['epoch']} "
               f"({time.time() - t:.0f} detik)")
-        pd.DataFrame(rows).to_csv(ROOT / "results" / "mf_tuning.csv", index=False)
+        pd.DataFrame(rows).to_csv(out, index=False)
 
 
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ notebooks/
   01_eda.ipynb                  eksplorasi data
   02_user_based_cf.ipynb        user-based CF, langkah demi langkah
   03_item_based_cf.ipynb        item-based CF, langkah demi langkah
+  04_matrix_factorization.ipynb matrix factorization, langkah demi langkah
 scripts/
   mf_tuning.py     pemilihan hyperparameter MF dengan data validasi
 tests/             pengujian kode dengan contoh hitungan di slide
@@ -101,6 +102,6 @@ dari 01. Semua notebook sudah berisi output hasil eksekusi.
 |---|---|---|---|---|---|
 | User-based CF (Pearson, k = 30) | 0,7342 | 0,8901 | 0,9434 | 0,2225 | 0,8474 |
 | Item-based CF (adjusted cosine, k = 30) | 0,7383 | 0,8949 | 0,9459 | 0,2237 | 0,8375 |
-| Matrix factorization | sedang dikerjakan | | | | |
+| Matrix factorization (SGD, K = 100, β = 0,2) | 0,7357 | 0,8554 | 0,9249 | 0,2138 | 0,8578 |
 
 Penjelasan lengkap setiap langkah, keputusan, dan analisis ada di notebook dan di [PROGRESS.md](PROGRESS.md).

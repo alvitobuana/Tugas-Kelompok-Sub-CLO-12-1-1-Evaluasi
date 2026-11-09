@@ -18,10 +18,10 @@ Data anggota kelompok: lihat [README.md](README.md).
 | Fungsi metrik + pengujian dengan contoh slide | Selesai (9 Nov 2026), `src/metrics.py` |
 | User-based CF | Selesai (9 Nov 2026), `notebooks/02_user_based_cf.ipynb` |
 | Item-based CF | Selesai (9 Nov 2026), `notebooks/03_item_based_cf.ipynb` |
-| Matrix Factorization | Belum |
+| Matrix Factorization | Selesai (9 Nov 2026), `notebooks/04_matrix_factorization.ipynb` |
 | Perbandingan akhir ketiga metode | Belum |
-| Repo GitHub + README | Belum (repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi) |
-| Share repo ke bayzal@gmail.com | Belum |
+| Repo GitHub + README | Push pertama 9 Nov 2026 (UBCF, IBCF, kode MF); repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi |
+| Share repo ke dosen | Repo dibiarkan public (keputusan 9 Nov 2026), jadi dosen bisa membuka link tanpa undangan |
 | Laporan PDF | Belum |
 
 ---
@@ -151,6 +151,8 @@ tidak ikut berubah) dan memasang library dari `requirements.txt`, termasuk Jupyt
 | `src/metrics.py` | MAE, MSE, RMSE, NMSE, NDCG@l sesuai rumus slide |
 | `src/ubcf.py` | User-based CF |
 | `src/ibcf.py` | Item-based CF |
+| `src/mf.py` | Matrix factorization (SGD) |
+| `scripts/mf_tuning.py` | Pemilihan hyperparameter MF dengan data validasi |
 | `src/plot_style.py` | Gaya grafik laporan |
 | `tests/` | Pengujian kode memakai contoh hitungan di slide |
 | `notebooks/` | Notebook langkah demi langkah (bahan screenshot laporan) |
@@ -346,6 +348,98 @@ dijelaskan ("karena Anda menyukai film X").
 
 ---
 
+## 2026-11-09 — Matrix factorization (notebook 04)
+
+**Implementasi:** `src/mf.py`, diuji dengan contoh di slide M04 (`tests/test_mf.py`, 3 test lulus).
+
+**Rumus (sama dengan slide):**
+
+    e_ij  = r_ij − p_i · q_j
+    p_ik ← p_ik + α (2 e_ij q_kj − β p_ik)
+    q_kj ← q_kj + α (2 e_ij p_ik − β q_kj)
+
+**Uji dengan contoh slide:** matriks 5 user × 4 film, K = 2, α = 0,0002, β = 0,02, 5.000 iterasi, inisialisasi
+acak 0–1 (persis kode slide). RMSE pada rating yang diketahui turun dari 2,440 ke 0,040, dan pola hasilnya
+sama dengan slide (U1–U2 suka D1, U3–U5 suka D4). Angka prediksi sel kosong sedikit berbeda dari slide
+karena angka acak awalnya berbeda.
+
+**Perbedaan kecil dengan kode slide dan alasannya:**
+
+| Kode slide | Implementasi kami | Alasan |
+|---|---|---|
+| Rating dilalui berurutan | Urutan rating diacak tiap epoch | Inilah sifat "stochastic" pada SGD; urutan tetap bisa membuat model bias ke user/film yang selalu diproses terakhir |
+| p diupdate dulu, lalu q memakai p yang sudah baru | p dan q diupdate serentak dari nilai lama | Sesuai turunan rumus di slide (kedua gradien dihitung di titik yang sama) |
+| Acak 0–1 | Acak 0–s, dengan s = 2·√(rata-rata rating / K) | Dengan K besar, acak 0–1 membuat prediksi awal jauh di atas 5 (rata-rata K/4). Penskalaan ini membuat prediksi awal ≈ rata-rata rating. Contoh slide tetap memakai acak 0–1 |
+| Berhenti jika error < 0,001 | Berhenti di jumlah epoch yang dipilih lewat data validasi | Pada data asli error latih tidak akan pernah < 0,001 tanpa overfitting parah |
+| Film tanpa rating latih tetap diprediksi p · q | Diganti rata-rata user | Vektor q film tersebut tidak pernah dilatih (masih acak) |
+
+**Pemilihan hyperparameter (`scripts/mf_tuning.py`):** data latih fold 1 dibagi 90% latih (72.106 rating) dan
+10% validasi (7.894 rating). Data uji tidak dipakai sama sekali. Pencarian dilakukan bertahap:
+
+1. Learning rate (K = 20, β = 0,02): α = 0,0002 (nilai slide) masih terus membaik sampai epoch 60 (RMSE
+   validasi 0,9647), jadi terlalu lambat. α = 0,005 dan 0,01 cepat turun, tetapi langsung overfitting
+   setelah epoch 3–6 karena β = 0,02 terlalu lemah.
+2. K ∈ {5, 10, 20, 50} × β ∈ {0,02; 0,1}: β = 0,1 lebih baik di semua K. Terbaik K = 50, β = 0,1, tetapi
+   **berada di ujung grid**.
+3. Perluasan β = 0,2 dan K = 100: terbaik K = 100, β = 0,2, masih di ujung grid.
+4. Perluasan kedua β ∈ {0,3; 0,5}, K = 200, maksimal 100 epoch: β = 0,3 dan K = 200 sama-sama lebih buruk,
+   sehingga optimum sudah berada di tengah grid dan pencarian dihentikan.
+
+RMSE validasi terbaik per kombinasi (α = 0,01):
+
+| | β = 0,02 | β = 0,1 | β = 0,2 | β = 0,3 | β = 0,5 |
+|---|---|---|---|---|---|
+| K = 5 | 0,9621 | 0,9439 | | | |
+| K = 10 | 0,9796 | 0,9580 | | | |
+| K = 20 | 0,9732 | 0,9543 | 0,9276 | | |
+| K = 50 | 0,9663 | 0,9413 | 0,9185 | 0,9249 | |
+| K = 100 | | 0,9274 | **0,9140** | 0,9257 | 0,9686 |
+| K = 200 | | | 0,9157 | 0,9262 | |
+
+**Konfigurasi akhir:** K = 100, α = 0,01, β = 0,2, 35 epoch (RMSE validasi 0,9140).
+
+**Alasan memperluas grid:** jika nilai terbaik ada di ujung rentang yang dicoba, ada kemungkinan nilai yang
+lebih baik berada di luar rentang tersebut. Grid diperluas sampai nilai terbaik diapit oleh nilai yang lebih
+buruk di kedua sisi.
+
+**Temuan untuk analisis:**
+- Dengan β = 0,02 (nilai slide), RMSE validasi **naik terus** setelah epoch 3–6 → overfitting.
+  Dengan β = 0,2, kurva validasi mendatar setelah sekitar epoch 20 dan tidak naik. Grafik:
+  `figures/mf_learning_rate.png` dan `figures/mf_kurva_belajar.png`.
+- K besar (100) hanya bermanfaat jika regularisasinya cukup kuat. Dengan β = 0,02, K = 50 justru lebih
+  buruk daripada K = 5.
+
+**Hasil 5-fold (K = 100, α = 0,01, β = 0,2, 35 epoch):**
+
+| Metrik | Rata-rata | Simpangan baku |
+|---|---|---|
+| MAE | 0,7357 | 0,0052 |
+| MSE | 0,8554 | 0,0097 |
+| RMSE | 0,9249 | 0,0052 |
+| NMSE | 0,2138 | 0,0024 |
+| NDCG@10 | 0,8578 | 0,0057 |
+
+**Contoh rekomendasi untuk user 1** (film minimal dirating 5 user, judul ganda disaring): A Close Shave,
+Pather Panchali, The Third Man, Faust, Lawrence of Arabia, Secrets & Lies, Dr. Strangelove, Ran,
+Down by Law, Rosencrantz and Guildenstern Are Dead.
+
+---
+
+## 2026-11-09 — Perbandingan sementara ketiga metode (rata-rata 5-fold)
+
+| Metode | MAE | MSE | RMSE | NMSE | NDCG@10 |
+|---|---|---|---|---|---|
+| User-based CF | **0,7342** | 0,8901 | 0,9434 | 0,2225 | 0,8474 |
+| Item-based CF | 0,7383 | 0,8949 | 0,9459 | 0,2237 | 0,8375 |
+| Matrix factorization | 0,7357 | **0,8554** | **0,9249** | **0,2138** | **0,8578** |
+
+**Pengamatan awal:** MF unggul jelas di MSE, RMSE, NMSE, dan NDCG@10, tetapi MAE-nya sedikit di atas UBCF.
+Karena MSE/RMSE mengkuadratkan error, metrik ini sangat menghukum kesalahan besar. Artinya MF lebih jarang
+membuat kesalahan besar (misalnya menebak 2 padahal aslinya 5), meskipun rata-rata kesalahan absolutnya
+mirip dengan UBCF. Analisis ini akan diperdalam di notebook 05 (sebaran error, uji per fold, dan baseline).
+
+---
+
 ## Lingkungan kerja
 
 | Komponen | Versi |
@@ -367,12 +461,13 @@ Cara menjalankan ulang:
     .venv\Scripts\python tests\test_metrics.py
     .venv\Scripts\python tests\test_ubcf.py
     .venv\Scripts\python tests\test_ibcf.py
+    .venv\Scripts\python tests\test_mf.py
+    .venv\Scripts\python scripts\mf_tuning.py     (opsional, ±25 menit, hasilnya sudah ada di results/)
 
 ---
 
 ## Langkah berikutnya
 
-1. Matrix factorization (SGD), notebook 04.
-3. Notebook 05: perbandingan ketiga metode + baseline sederhana (rata-rata user) sebagai pembanding.
-4. README dan push ke GitHub (tanpa folder `data/`, cukup instruksi unduh ulang).
-5. Laporan PDF.
+1. Notebook 05: perbandingan ketiga metode + baseline sederhana (rata-rata user) sebagai pembanding.
+2. Push hasil MF dan notebook 05 ke GitHub.
+3. Laporan PDF.
