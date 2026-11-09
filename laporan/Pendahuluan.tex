@@ -1,0 +1,54 @@
+\chapter{Pendahuluan}
+
+\section{Latar Belakang}
+Perkembangan pesat platform digital dan layanan media \textit{streaming} telah memicu fenomena ledakan informasi (\textit{information overload}), di mana jutaan konten tersedia secara simultan sementara kapasitas atensi kognitif manusia bersifat terbatas \citep{ricci2015recommender}. Dalam konteks platform hiburan film, pengguna kerap menghadapi kesulitan memilih film yang sesuai dengan preferensi personal di antara ribuan judul yang tersedia. Sistem Pemberi Rekomendasi (\textit{Recommender System}) hadir sebagai solusi teknologi krusial yang menyaring volume konten masif dan menghadirkan saran personalisasi yang relevan \citep{jannach2010recommender}.
+
+Pendekatan paling dominan dan berhasil diterapkan dalam industri rekomendasi adalah \textit{Collaborative Filtering} (CF) \citep{su2009survey}. Berbeda dengan \textit{Content-Based Filtering} yang bergantung pada ekstraksi atribut deskriptif item (seperti genre, sutradara, atau sinopsis), \textit{Collaborative Filtering} murni memanfaatkan pola interaksi masa lalu antara pengguna dan item. Paradigma CF terbagi menjadi dua mazhab utama:
+\begin{enumerate}
+    \item \textbf{Memory-Based Collaborative Filtering}: Menggunakan seluruh matriks interaksi pengguna-item secara langsung untuk menghitung derajat kemiripan. Pendekatan ini terbagi menjadi \textit{User-Based Collaborative Filtering} (UBCF) yang memprediksi preferensi berdasarkan pengguna lain yang memiliki pola rating serupa \citep{resnick1994grouplens}, dan \textit{Item-Based Collaborative Filtering} (IBCF) yang mengestimasi rating berdasarkan kemiripan historis antar-item yang telah dinilai oleh pengguna yang sama \citep{sarwar2001item}.
+    \item \textbf{Model-Based CF}: Mengonstruksi representasi matematis laten dari data interaksi. Algoritma \textit{Matrix Factorization} (MF) yang dipopulerkan pada kompetisi Netflix Prize merepresentasikan pengguna dan item ke dalam ruang faktor laten berdimensi rendah ($K \ll \min(|U|, |I|)$), dioptimalkan menggunakan \textit{Stochastic Gradient Descent} (SGD) dengan regularisasi $L_2$ \citep{koren2009matrix}.
+\end{enumerate}
+
+Meskipun ketiga metode tersebut sangat populer, implementasi praktisnya menghadapi tantangan serius berupa tingginya tingkat kekosongan matriks (\textit{data sparsity}). Pada dataset tolok ukur MovieLens 100K \citep{harper2015movielens}, tingkat kelangkaan data mencapai 93,70\%, yang berarti hanya sekitar 6,30\% kombinasi pengguna-item yang memiliki rating eksplisit. Kondisi sparsitas ekstrem ini berdampak langsung pada keakuratan perhitungan kemiripan tetangga pada metode \textit{memory-based} serta risiko \textit{overfitting} pada metode \textit{model-based}.
+
+Selain tantangan data, aspek evaluasi sistem rekomendasi sering kali dipersempit hanya pada metrik kesalahan rating absolut seperti \textit{Mean Absolute Error} (MAE) atau \textit{Root Mean Squared Error} (RMSE). Padahal, dalam skenario nyata, pengguna tidak semata-mata membutuhkan prediksi angka rating yang akurat, melainkan daftar rekomendasi teratas (\textit{Top-N Recommendation}) yang benar-benar relevan dan terurut secara tepat \citep{jarvelin2002cumulated}. Oleh karena itu, evaluasi komprehensif yang mengombinasikan metrik kesalahan prediksi (MAE, MSE, RMSE, NMSE), metrik perankingan (\textit{Normalized Discounted Cumulative Gain} pada $k=10$ atau NDCG@10), serta analisis waktu komputasi merupakan kebutuhan mutlak \citep{baizal2024recsys}.
+
+Penelitian ini dilakukan dalam rangka memenuhi Capaian Pembelajaran Sub-CLO 12-1-1 pada mata kuliah Sistem Pemberi Rekomendasi di Fakultas Informatika Universitas Telkom. Seluruh algoritma, model \textit{baseline}, dan fungsi metrik diimplementasikan secara mandiri dari awal (\textit{from scratch}) tanpa memanfaatkan pustaka sistem rekomendasi siap pakai seperti \textit{Surprise} atau \textit{LightFM}. Pengujian dilakukan menggunakan protokol baku 5-\textit{fold cross-validation} resmi pada MovieLens 100K guna menjamin validitas ilmiah, reproduktibilitas hasil, dan ketelitian analisis komparatif.
+
+\section{Perumusan Masalah}
+Berdasarkan latar belakang yang telah dipaparkan, perumusan masalah dalam penelitian ini dijabarkan ke dalam empat poin pertanyaan penelitian:
+\begin{enumerate}
+    \item Bagaimana akurasi prediksi rating dari metode \textit{User-Based Collaborative Filtering} (UBCF), \textit{Item-Based Collaborative Filtering} (IBCF), dan \textit{Matrix Factorization} (MF) dibandingkan dengan empat model \textit{baseline} (tebak acak, rata-rata global, rata-rata pengguna, dan rata-rata film) pada dataset MovieLens 100K?
+    \item Bagaimana pengaruh ukuran ketetanggaan ($k$) pada UBCF dan IBCF terhadap kinerja kesalahan estimasi rating?
+    \item Bagaimana efektivitas masing-masing pendekatan rekomendasi dalam menghasilkan urutan rekomendasi Top-10 yang relevan berdasarkan metrik perankingan \textit{Normalized Discounted Cumulative Gain} (NDCG@10)?
+    \item Bagaimana karakteristik \textit{trade-off} antara akurasi prediksi (MAE, RMSE), kualitas perankingan (NDCG@10), dan efisiensi waktu komputasi (waktu pelatihan dan waktu inferensi) antar algoritma yang diuji?
+\end{enumerate}
+
+\section{Tujuan Penelitian}
+Tujuan yang hendak dicapai dalam pelaksanaan tugas besar penelitian ini adalah:
+\begin{enumerate}
+    \item Mengimplementasikan dan mengevaluasi kinerja empat model \textit{baseline}, UBCF, IBCF, dan Matrix Factorization pada dataset MovieLens 100K menggunakan protokol baku 5-\textit{fold cross-validation}.
+    \item Melakukan analisis sensitivitas parameter ukuran ketetanggaan ($k$) pada UBCF dan IBCF guna mengidentifikasi nilai parameter optimal.
+    \item Mengukur dan membandingkan kualitas perankingan daftar rekomendasi Top-10 antar metode menggunakan metrik NDCG@10 dengan ambang batas kepuasan biner $r \ge 4$.
+    \item Melakukan analisis komparatif menyeluruh mencakup akurasi prediksi, perankingan, uji signifikansi statistik berpasangan (\textit{paired t-test}), sebaran residual error, dampak sparsitas data, dan kompleksitas waktu komputasi untuk memberikan rekomendasi pemilihan arsitektur sistem perekomendasi film.
+\end{enumerate}
+
+\section{Ruang Lingkup dan Batasan}
+Ruang lingkup dan batasan penelitian ini ditetapkan sebagai berikut:
+\begin{enumerate}
+    \item \textbf{Dataset}: Menggunakan dataset publik resmi MovieLens 100K yang dirilis oleh GroupLens Research, terdiri atas 100.000 rating dari 943 pengguna terhadap 1.682 film dalam rentang skala rating diskrit bilangan bulat 1 sampai 5.
+    \item \textbf{Protokol Evaluasi}: Menggunakan partisi resmi 5-\textit{fold cross-validation} bawaan MovieLens (\texttt{u1.base}/\allowbreak\texttt{u1.test} sampai \texttt{u5.base}/\allowbreak\texttt{u5.test}) dengan rasio 80:20 pada tiap \textit{fold}.
+    \item \textbf{Batasan Pustaka}: Seluruh algoritma perekomendasi, perhitungan kesamaan, optimasi SGD, dan metrik evaluasi diimplementasikan murni dari awal menggunakan bahasa pemrograman Python 3.12 dengan bantuan pustaka komputasi numerik NumPy, Pandas, dan SciPy, tanpa menggunakan kerangka kerja rekomendasi siap pakai (\textit{black-box}).
+    \item \textbf{Metrik Evaluasi}: Evaluasi kuantitatif mencakup metrik kesalahan prediksi rating: MAE (\textit{Mean Absolute Error}), MSE (\textit{Mean Squared Error}), RMSE (\textit{Root Mean Squared Error}), NMSE (\textit{Normalized Mean Squared Error}), serta metrik kualitas perankingan NDCG@10 (\textit{Normalized Discounted Cumulative Gain} pada $k=10$).
+    \item \textbf{Lingkungan Eksekusi}: Pengujian dilakukan pada lingkungan perangkat keras prosesor tunggal (CPU) standar untuk memastikan keterbandingan waktu komputasi yang adil dan objektif.
+\end{enumerate}
+
+\section{Sistematika Penulisan}
+Laporan tugas besar ini disusun secara sistematis dengan struktur sebagai berikut:
+\begin{itemize}
+    \item \textbf{Bab I Pendahuluan}: Memaparkan latar belakang, perumusan masalah, tujuan, batasan ruang lingkup penelitian, serta sistematika penulisan.
+    \item \textbf{Bab II Kajian Pustaka}: Menguraikan landasan teori mengenai sistem pemberi rekomendasi, karakteristik matriks interaksi, formulasi matematis UBCF, IBCF, Matrix Factorization, metrik evaluasi rating dan ranking, serta pengujian statistik.
+    \item \textbf{Bab III Metodologi dan Desain Sistem}: Menjelaskan diagram alur penelitian, spesifikasi dataset, skenario model \textit{baseline}, rancangan pengujian algoritma rekomendasi, dan strategi verifikasi kode (\textit{sanity check}).
+    \item \textbf{Bab IV Hasil dan Pembahasan}: Menyajikan hasil eksplorasi data (EDA), perbandingan kinerja 5-\textit{fold cross-validation}, analisis sensitivitas parameter, kurva belajar SGD, uji signifikansi statistik berpasangan, analisis sebaran residual error, evaluasi waktu komputasi, serta studi kasus Top-10 rekomendasi.
+    \item \textbf{Bab V Kesimpulan dan Saran}: Menyimpulkan temuan utama penelitian yang menjawab rumusan masalah dan memberikan saran konstruktif untuk pengembangan sistem di masa mendatang.
+\end{itemize}

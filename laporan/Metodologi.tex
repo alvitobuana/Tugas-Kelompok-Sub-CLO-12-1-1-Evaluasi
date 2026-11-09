@@ -1,0 +1,132 @@
+\chapter{Metodologi dan Desain Sistem}
+
+\section{Alur Penelitian}
+Penelitian evaluasi komparatif sistem pemberi rekomendasi ini dirancang secara terstruktur dan modular, mengikuti kaidah ilmiah yang ketat. Tahapan alur pelaksanaan penelitian disajikan pada Gambar \ref{fig:flowchart_penelitian}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1.4cm and 2cm,
+    startstop/.style={rectangle, rounded corners=8pt, minimum width=4cm, minimum height=0.9cm, text centered, draw=black!80, fill=blue!15, font=\bfseries\small},
+    process/.style={rectangle, minimum width=5.5cm, minimum height=0.9cm, text centered, draw=black!80, fill=orange!15, font=\small},
+    decision/.style={diamond, aspect=2.2, text centered, draw=black!80, fill=green!20, font=\small},
+    arrow/.style={thick,->,>=stealth}
+]
+
+\node (start) [startstop] {Mulai};
+\node (step1) [process, below of=start] {1. Pengunduhan \& Validasi SHA-256 Dataset MovieLens 100K};
+\node (step2) [process, below of=step1] {2. Analisis Data Eksploratif (EDA) \& Analisis Sparsitas};
+\node (step3) [process, below of=step2] {3. Implementasi Metrik \& Verifikasi Sanity Check};
+\node (check) [decision, below of=step3, yshift=-0.3cm] {Lulus Uji Sanity Check?};
+\node (step4) [process, below of=check, yshift=-0.5cm] {4. Pemodelan Baseline \& Algoritma (UBCF, IBCF, MF)};
+\node (step5) [process, below of=step4] {5. Evaluasi 5-Fold Cross Validation Bawaan};
+\node (step6) [process, below of=step5] {6. Analisis Komparatif, Uji Statistik, \& Waktu Komputasi};
+\node (finish) [startstop, below of=step6] {Selesai (Laporan \& Rekomendasi)};
+
+\draw [arrow] (start) -- (step1);
+\draw [arrow] (step1) -- (step2);
+\draw [arrow] (step2) -- (step3);
+\draw [arrow] (step3) -- (check);
+\draw [arrow] (check) -- node[anchor=east, font=\scriptsize\bfseries] {Ya} (step4);
+\draw [arrow] (check.east) -- ++(1.5,0) node[anchor=south, font=\scriptsize\bfseries] {Tidak (Debug)} |- (step3.east);
+\draw [arrow] (step4) -- (step5);
+\draw [arrow] (step5) -- (step6);
+\draw [arrow] (step6) -- (finish);
+
+\end{tikzpicture}
+\caption{Diagram alir tahapan metodologi penelitian}
+\label{fig:flowchart_penelitian}
+\end{figure}
+
+Tahapan dimulai dengan pengunduhan berkas dataset MovieLens 100K dari peladen resmi GroupLens yang diverifikasi secara kriptografis menggunakan algoritma hashing SHA-256. Selanjutnya, dilakukan analisis eksplorasi data untuk memetakan karakteristik distribusi rating, pola aktivitas pengguna/film, derajat kelangkaan matriks, dan fenomena \textit{long-tail}. Tahap ketiga mengimplementasikan fungsi metrik evaluasi yang wajib lolos \textit{sanity check} terhadap studi kasus rujukan silabus perkuliahan. Tahap berikutnya adalah perancangan empat model \textit{baseline} serta tiga algoritma rekomendasi (UBCF, IBCF, dan MF), dilanjutkan evaluasi 5-\textit{fold cross-validation}, uji t berpasangan, analisis sebaran residual, serta pengukuran latensi komputasi.
+
+\section{Spesifikasi Dataset dan Protokol Partisi Data}
+Eksperimen menggunakan dataset publik MovieLens 100K yang dihimpun oleh GroupLens Research pada University of Minnesota \citep{harper2015movielens}. Integritas arsip \texttt{ml-100k.zip} divalidasi terhadap nilai hash SHA-256 resmi:
+\begin{center}
+\texttt{0e338c2e4a32958372f8113bfab5eed077d448379be25c6199e3df2dae69f350}
+\end{center}
+Karakteristik fundamental dataset dirangkum pada Tabel \ref{tab:karakteristik_dataset}.
+
+\begin{table}[htbp]
+\centering
+\caption{Karakteristik dataset MovieLens 100K}
+\label{tab:karakteristik_dataset}
+\small
+\begin{tabular}{l l}
+\toprule
+\textbf{Parameter Data} & \textbf{Nilai Statistik} \\
+\midrule
+Jumlah Rating ($|\mathcal{K}|$) & 100.000 \\
+Jumlah Pengguna ($|U|$) & 943 \\
+Jumlah Film / Item ($|I|$) & 1.682 \\
+Domain Skala Rating & $\{1, 2, 3, 4, 5\}$ \\
+Rerata Rating Keseluruhan & 3,5299 \\
+Derajat Sparsitas Matriks & 93,6953\% \\
+Rating Minimum per Pengguna & 20 interaksi \\
+Rating Maksimum per Pengguna & 737 interaksi \\
+Protokol Validasi & 5-\textit{Fold Cross-Validation} Resmi (\texttt{u1} s.d. \texttt{u5}) \\
+Ukuran Data Latih per \textit{Fold} & 80.000 rating (80\%) \\
+Ukuran Data Uji per \textit{Fold} & 20.000 rating (20\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Penggunaan 5-\textit{fold cross-validation} bawaan MovieLens (\texttt{u1.base}/\texttt{u1.test} hingga \texttt{u5.base}/\texttt{u5.test}) memastikan bahwa setiap interaksi pada dataset tepat satu kali bertindak sebagai data uji, menghasilkan estimasi performa yang adil dan dapat dibandingkan secara langsung dengan literatur ilmiah internasional.
+
+\section{Skenario Model Baseline}
+Model \textit{baseline} berfungsi sebagai tolok ukur batas bawah (\textit{lower bound}) untuk membuktikan apakah algoritma sistem rekomendasi yang dirancang benar-benar berhasil mempelajari pola preferensi personal, atau hanya sekadar memantulkan bias statistik data \citep{jannach2010recommender}. Empat strategi \textit{baseline} dirancang sebagai berikut:
+\begin{enumerate}
+    \item \textbf{Tebak Acak (Random Guess)}: Memprediksi rating secara acak dengan distribusi seragam kontinu $\hat{r}_{u,i} \sim \mathcal{U}(1, 5)$.
+    \item \textbf{Rata-rata Global (Global Mean)}: Menetapkan nilai prediksi konstan sebesar rata-rata rating seluruh interaksi pada data latih:
+    \begin{equation}
+    \hat{r}_{u,i} = \mu = \frac{1}{|Tr|} \sum_{(v, j) \in Tr} r_{v,j}
+    \end{equation}
+    \item \textbf{Rata-rata Pengguna (User Mean)}: Mengasumsikan setiap pengguna memiliki tendensi penilaian konstan sebesar rata-rata historisnya:
+    \begin{equation}
+    \hat{r}_{u,i} = \bar{r}_u = \frac{1}{|I_u|} \sum_{j \in I_u} r_{u,j}
+    \end{equation}
+    Jika pengguna $u$ belum pernah menilai item pada data latih, prediksi menggunakan nilai cadangan (\textit{fallback}) $\mu$.
+    \item \textbf{Rata-rata Film (Item Mean)}: Mengasumsikan kualitas inheren suatu film konstan sebesar rata-rata rating yang diterimanya dari seluruh penonton:
+    \begin{equation}
+    \hat{r}_{u,i} = \bar{r}_i = \frac{1}{|U_i|} \sum_{v \in U_i} r_{v,i}
+    \end{equation}
+    Jika film $i$ merupakan item baru pada data uji, nilai prediksi menggunakan \textit{fallback} $\mu$.
+\end{enumerate}
+
+\section{Skenario Algoritma Rekomendasi dan Penalaan Parameter}
+Tiga algoritma rekomendasi utama dikonfigurasi berdasarkan hasil penalaan parameter empiris:
+\begin{enumerate}
+    \item \textbf{User-Based Collaborative Filtering (UBCF)}:
+    \begin{itemize}
+        \item Metrik kesamaan: Koefisien Korelasi Pearson (PCC).
+        \item Pembobotan signifikansi: $\gamma = 50$ (memberikan diskon linear pada pengguna bersama di bawah 50 item).
+        \item Jumlah tetangga terdekat: $k = 30$ (diuji pada rentang sensitivitas $k \in \{5, 10, 20, 30, 40, 50, 75, 100\}$).
+        \item Penanganan kasus khusus: Jika tidak ada tetangga terdekat yang pernah menilai item $i$, nilai prediksi menggunakan rata-rata pengguna $\bar{r}_u$.
+    \end{itemize}
+    
+    \item \textbf{Item-Based Collaborative Filtering (IBCF)}:
+    \begin{itemize}
+        \item Metrik kesamaan: \textit{Adjusted Cosine Similarity} (mengoreksi bias rerata pengguna).
+        \item Pembobotan signifikansi: $\gamma = 50$.
+        \item Jumlah tetangga terdekat: $k = 30$ (diuji pada rentang sensitivitas $k \in \{5, 10, 20, 30, 40, 50, 75, 100\}$).
+        \item Penanganan kasus khusus: Jika pengguna belum pernah menilai item yang mirip dengan item $i$, prediksi menggunakan rata-rata film $\bar{r}_i$.
+    \end{itemize}
+    
+    \item \textbf{Matrix Factorization (SGD)}:
+    \begin{itemize}
+        \item Jumlah faktor laten: $K = 100$.
+        \item Laju pembelajaran (\textit{learning rate}): $\alpha = 0,01$ (diuji pada variasi $\alpha \in \{0,001, 0,005, 0,01, 0,02\}$).
+        \item Parameter penalti regularisasi $L_2$: $\beta = 0,2$ (mencegah pembesaran magnitudo bobot laten).
+        \item Jumlah siklus iterasi: 35 \textit{epochs}.
+        \item Inisialisasi bobot laten: $p_u, q_i \sim \mathcal{N}(0, 1/\sqrt{K})$ dan bias $b_u, b_i = 0$.
+        \item Batasan prediksi (\textit{clipping}): Seluruh estimasi akhir dipotong ke dalam batas interval sah $[1, 5]$.
+    \end{itemize}
+\end{enumerate}
+
+\section{Verifikasi Kebenaran Kode dan Penjaminan Mutu Perangkat Lunak}
+Untuk menjamin integritas saintifik sebelum menjalankan komputasi 5-\textit{fold}, dilakukan prosedur verifikasi ganda:
+\begin{enumerate}
+    \item \textbf{Sanity Check terhadap Silabus}: Mengimplementasikan uji asersi otomatis (\textit{unit assertion}) yang memverifikasi bahwa keluaran fungsi metrik pada modul \texttt{src/metrics.py} menghasilkan nilai yang identik secara presisi dengan contoh perhitungan manual pada slide materi perkuliahan Sistem Pemberi Rekomendasi \citep{baizal2024recsys}. Sembilan skenario uji asersi berhasil dilewati dengan galat mutlak nol ($|y_{\text{calc}} - y_{\text{slide}}| < 10^{-6}$).
+    \item \textbf{Automated Test Suite}: Seluruh modul sistem pada direktori \texttt{src/} dilindungi oleh 19 \textit{unit test} komprehensif pada pustaka uji \texttt{tests/}, mencakup uji validasi integritas data, perhitungan kesamaan matriks ber-sparsitas tinggi, kestabilan konvergensi SGD, dan skema validasi silang.
+    \item \textbf{Arsitektur Caching}: Hasil komputasi matriks kesamaan dan pelatihan model disimpan secara deterministik pada direktori \texttt{results/cache/} guna mempercepat proses eksekusi ulang (\textit{re-run}) tanpa mengubah determinisme numerik.
+\end{enumerate}

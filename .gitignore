@@ -3,7 +3,31 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 desktop.ini
-# dataset tidak diunggah; unduh ulang dari GroupLens (lihat README)
+
+# dataset tidak diunggah; unduh otomatis dari GroupLens
 data/
-# berisi NIM anggota; tidak diunggah ke repository publik
-info_kelompok.md
+
+# cache komputasi
+results/cache/
+
+# LaTeX temporary & build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+laporan/*.aux
+laporan/*.log
+laporan/*.out
+laporan/*.toc
+laporan/*.lof
+laporan/*.lot
+laporan/*.bbl
+laporan/*.blg
+laporan/*.synctex.gz

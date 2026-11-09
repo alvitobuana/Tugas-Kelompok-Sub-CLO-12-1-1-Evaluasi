@@ -6,6 +6,8 @@ permission"). Jika folder data/ml-100k belum ada, dataset diunduh otomatis
 dari situs resmi GroupLens saat pertama kali dibutuhkan.
 """
 import hashlib
+import ssl
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -24,6 +26,33 @@ R_MIN, R_MAX = 1, 5
 COLS = ["user", "item", "rating", "timestamp"]
 
 
+def _unduh(url):
+    """Mengunduh url dengan verifikasi sertifikat TLS tetap aktif.
+
+    Python di Windows kadang gagal memverifikasi rantai sertifikat
+    (CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate) karena
+    tidak mengambil sertifikat perantara sendiri. Jika itu terjadi, dicoba lagi
+    memakai penyimpanan sertifikat sistem operasi lewat paket `truststore`.
+    Verifikasi tidak pernah dimatikan.
+    """
+    try:
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            return resp.read()
+    except urllib.error.URLError as err:
+        if not isinstance(err.reason, ssl.SSLCertVerificationError):
+            raise
+        try:
+            import truststore
+        except ImportError:
+            raise RuntimeError(
+                "Verifikasi sertifikat gagal. Pasang `pip install truststore` lalu jalankan ulang, "
+                f"atau unduh manual {url} dan ekstrak ke folder data/ (lihat README)."
+            ) from err
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        with urllib.request.urlopen(url, timeout=60, context=ctx) as resp:
+            return resp.read()
+
+
 def ensure_data():
     """Mengunduh dan mengekstrak MovieLens 100K jika belum ada.
 
@@ -36,8 +65,7 @@ def ensure_data():
     zip_path = ROOT_DATA / "ml-100k.zip"
     if not zip_path.exists():
         print(f"Dataset belum ada, mengunduh dari {URL} ...")
-        with urllib.request.urlopen(URL, timeout=60) as resp:
-            zip_path.write_bytes(resp.read())
+        zip_path.write_bytes(_unduh(URL))
     digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
     if digest != SHA256:
         zip_path.unlink()
@@ -45,6 +73,15 @@ def ensure_data():
     with zipfile.ZipFile(zip_path) as z:
         z.extractall(ROOT_DATA)
     print(f"Dataset siap di {DATA_DIR}")
+
+
+def verifikasi_dataset():
+    """Mengembalikan (sha256_zip, cocok). Keduanya None jika zip tidak ada (dataset diekstrak manual)."""
+    zip_path = ROOT_DATA / "ml-100k.zip"
+    if not zip_path.exists():
+        return None, None
+    digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+    return digest, digest == SHA256
 
 
 def load_ratings(filename="u.data"):

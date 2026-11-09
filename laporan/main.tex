@@ -1,0 +1,146 @@
+%% Template Laporan Tugas Besar Sistem Pemberi Rekomendasi (CAK4TBB3)
+%% Fakultas Informatika, Universitas Telkom
+%% Berbasis Template Proposal FIF Telkom University
+
+\documentclass[a4paper,12pt,oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{sectsty}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{anysize}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[bahasa]{babel}
+\usepackage{indentfirst} % Spasi untuk paragraf pertama
+\usepackage{geometry}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\marginsize{4cm}{3cm}{3cm}{3cm} % {left}{right}{top}{bottom}
+\usepackage[compact]{titlesec} 
+\usepackage{etoolbox}
+\usepackage{natbib} % for Harvard/numeric style
+\usepackage[bookmarks,hypertexnames=false,debug]{hyperref}
+\usepackage{bookmark}
+
+% Path direktori gambar
+\graphicspath{{figures/}{../figures/}{./}}
+
+\makeatletter
+\patchcmd{\ttlh@hang}{\parindent\z@}{\parindent\z@\leavevmode}{}{}
+\patchcmd{\ttlh@hang}{\noindent}{}{}{}
+\makeatother
+
+\chapterfont{\centering}
+\newcommand{\bigsize}{\fontsize{16pt}{14pt}\selectfont}
+\chapterfont{\centering\bigsize\bfseries}
+\sectionfont{\large\bfseries}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand\thesection{\arabic{chapter}.\arabic{section}}
+\renewcommand\thesubsection{\thesection.\arabic{subsection}}
+\renewcommand{\theequation}{\arabic{chapter}.\arabic{equation}}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}}
+\renewcommand{\thetable}{\arabic{chapter}.\arabic{table}}
+
+\renewcommand\bibname{Daftar Pustaka}
+\addto{\captionsbahasa}{\renewcommand{\bibname}{Daftar Pustaka}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{}
+\chead{}
+\rhead{}
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+\renewcommand{\headrulewidth}{0pt}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Metadata Tugas Kelompok 3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{EVALUASI SISTEM PEMBERI REKOMENDASI: STUDI KOMPARATIF COLLABORATIVE FILTERING DAN MATRIX FACTORIZATION PADA MOVIELENS 100K}\let\Title\@title
+
+\newcommand{\EngTitle}{Evaluation of Recommender Systems: A Comparative Study of Collaborative Filtering and Matrix Factorization on MovieLens 100K}
+
+\author{Kelompok 3} \let\Author\@author
+\newcommand{\Prodi}{Informatika}
+\newcommand{\MataKuliah}{Sistem Pemberi Rekomendasi (CAK4TBB3)}
+\newcommand{\SubCLO}{Sub-CLO 12-1-1: Evaluasi Sistem Rekomendasi}
+\newcommand{\Kelas}{IF-47-01 / RecSys 2627-1}
+\newcommand{\Dosen}{Prof. Dr. Z.K. Abdurahman Baizal, S.Si., M.Kom.}
+\date{2026} \let\Date\@date
+
+\makeatother
+\linespread{1.15}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bagian Awal: Cover, Abstrak, Daftar Isi
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagenumbering{roman} 
+\begin{titlepage}
+\thispagestyle{empty}
+\pdfbookmark{Cover}{ }
+\input{Cover}
+\end{titlepage}
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Abstrak}
+\input{Abstrak-Indo}
+\clearpage
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Daftar Isi}
+\tableofcontents
+\cleardoublepage
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Daftar Gambar}
+\listoffigures
+\cleardoublepage
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Daftar Tabel}
+\listoftables
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bab-bab Laporan
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagenumbering{arabic}
+\include{Pendahuluan}        % Bab I
+\include{Kajian-Pustaka}      % Bab II
+\include{Metodologi}          % Bab III
+\include{Hasil-Pembahasan}    % Bab IV
+\include{Kesimpulan}          % Bab V
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Daftar Pustaka
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Daftar Pustaka}
+\bibliographystyle{plain}
+\bibliography{References}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lampiran
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Lampiran}
+\include{Lampiran}
+
+\end{document}

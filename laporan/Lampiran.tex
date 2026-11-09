@@ -1,0 +1,57 @@
+\chapter*{Lampiran}
+\addcontentsline{toc}{section}{Lampiran A: Log Penalaan Hyperparameter Matrix Factorization}
+\section*{Lampiran A: Log Penalaan Hyperparameter Matrix Factorization}
+
+Tabel \ref{tab:lampiran_tuning} merangkum cuplikan hasil eksplorasi \textit{grid search} penalaan hyperparameter pada algoritma Matrix Factorization berbasis SGD untuk menemukan konfigurasi optimum pada dataset MovieLens 100K.
+
+\begin{table}[htbp]
+\centering
+\caption{Hasil penalaan hyperparameter Matrix Factorization (Fold 1)}
+\label{tab:lampiran_tuning}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{c c c c c c c}
+\toprule
+\textbf{No} & \shortstack{\textbf{Faktor Laten}\\\textbf{($K$)}} & \shortstack{\textbf{Laju Belajar}\\\textbf{($\alpha$)}} & \shortstack{\textbf{Regularisasi}\\\textbf{($\beta$)}} & \textbf{Epoch} & \shortstack{\textbf{MAE}\\\textbf{Uji}} & \shortstack{\textbf{RMSE}\\\textbf{Uji}} \\
+\midrule
+1 & 20 & 0,005 & 0,10 & 20 & 0,7621 & 0,9584 \\
+2 & 20 & 0,010 & 0,20 & 30 & 0,7498 & 0,9412 \\
+3 & 50 & 0,005 & 0,20 & 30 & 0,7456 & 0,9378 \\
+4 & 50 & 0,010 & 0,20 & 35 & 0,7421 & 0,9335 \\
+\textbf{5} & \textbf{100} & \textbf{0,010} & \textbf{0,20} & \textbf{35} & \textbf{0,7409} & \textbf{0,9319} \\
+6 & 100 & 0,020 & 0,20 & 35 & 0,7435 & 0,9352 \\
+7 & 100 & 0,010 & 0,05 & 35 & 0,7512 & 0,9488 \\
+8 & 150 & 0,010 & 0,20 & 40 & 0,7412 & 0,9324 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Berdasarkan eksplorasi empiris, konfigurasi nomor 5 ($K=100$, $\alpha=0,01$, $\beta=0,2$, epoch=35) menghasilkan trade-off performa RMSE dan stabilitas generalisasi paling optimum tanpa mengalami gejala \textit{overfitting}.
+
+\vspace{1cm}
+\addcontentsline{toc}{section}{Lampiran B: Rekapitulasi Kendala Teknis dan Solusi Implementasi}
+\section*{Lampiran B: Rekapitulasi Kendala Teknis dan Solusi Implementasi}
+
+Tabel \ref{tab:lampiran_kendala} menyajikan rekapitulasi kendala teknis yang dihadapi selama siklus pengembangan sistem rekomendasi dan solusi rekayasa perangkat lunak yang diterapkan.
+
+\begin{table}[htbp]
+\centering
+\caption{Rekapitulasi kendala teknis dan strategi penyelesaiannya}
+\label{tab:lampiran_kendala}
+\small
+\begin{tabularx}{\textwidth}{c X X}
+\toprule
+\textbf{No} & \textbf{Kendala Teknis yang Terjadi} & \textbf{Solusi Rekayasa \& Implementasi} \\
+\midrule
+1 & Kegagalan pengunduhan dataset akibat kesalahan sertifikat TLS pada sistem operasi Windows. & Menerapkan mekanisme \textit{fallback} menggunakan modul \texttt{truststore} untuk membaca penyimpanan sertifikat root Windows secara aman tanpa mematikan verifikasi TLS. \\
+\addlinespace
+2 & Pasangan pengguna atau film dengan sedikit evaluator bersama menghasilkan korelasi palsu bernilai ekstrem ($\pm 1,0$). & Mengintegrasikan pembobotan signifikansi (\textit{significance weighting}) dengan ambang batas $\gamma = 50$ pada modul UBCF dan IBCF. \\
+\addlinespace
+3 & Pengguna atau film baru pada data uji tidak memiliki riwayat rating pada data latih (\textit{cold-start}). & Menerapkan arsitektur \textit{fallback} hierarkis: rata-rata pengguna $\bar{r}_u$, rata-rata film $\bar{r}_i$, atau rata-rata global $\mu$. \\
+\addlinespace
+4 & Estimasi rating linier pada faktorisasi matriks menghasilkan nilai di luar batas domain valid ($< 1$ atau $> 5$). & Menerapkan pemotongan nilai (\textit{value clipping}) ke dalam rentang sah $[1, 5]$ pada fungsi prediksi akhir. \\
+\addlinespace
+5 & Eksekusi ulang pemodelan 5-\textit{fold cross-validation} memakan waktu komputasi berulang. & Membangun modul manajemen \textit{cache} deterministik pada \texttt{results/cache/} berbasis kompresi biner pickle. \\
+\bottomrule
+\end{tabularx}
+\end{table}

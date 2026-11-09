@@ -1,0 +1,149 @@
+\chapter{Kajian Pustaka}
+
+\section{Taksonomi Sistem Rekomendasi dan Karakteristik Data Matriks Interaksi}
+Sistem pemberi rekomendasi (\textit{recommender system}) memodelkan interaksi antara himpunan pengguna $U = \{u_1, u_2, \dots, u_{|U|}\}$ dan himpunan item $I = \{i_1, i_2, \dots, i_{|I|}\}$. Interaksi tersebut direpresentasikan ke dalam matriks rating eksplisit $R \in \mathbb{R}^{|U| \times |I|}$, di mana elemen $r_{u,i}$ menyatakan tingkat preferensi yang diberikan oleh pengguna $u$ terhadap item $i$. Pada umumnya, skala rating bernilai diskrit dalam domain tertentu, seperti $\{1, 2, 3, 4, 5\}$ pada dataset MovieLens \citep{harper2015movielens}.
+
+Karakteristik fundamental dari matriks interaksi $R$ adalah tingginya tingkat kekosongan atau sparsitas (\textit{sparsity}) \citep{ricci2015recommender}. Himpunan pasangan pengguna-item yang teramati didefinisikan sebagai $\mathcal{K} = \{(u, i) \mid r_{u,i} \neq \emptyset\}$. Derajat sparsitas matriks dirumuskan sebagai:
+\begin{equation}
+\label{eq:sparsity}
+\text{Sparsitas} = 1 - \frac{|\mathcal{K}|}{|U| \times |I|}
+\end{equation}
+Pada kondisi di mana sparsitas melampaui 90\%, sistem menghadapi fenomena \textit{cold-start problem} (kesulitan menghasilkan rekomendasi akurat bagi entitas pengguna atau item baru dengan riwayat interaksi minimal) dan distribusi \textit{long-tail} (hanya sebagian kecil item populer yang mendominasi interaksi, sedangkan mayoritas item jarang dievaluasi) \citep{jannach2010recommender}.
+
+\section{User-Based Collaborative Filtering (UBCF)}
+\textit{User-Based Collaborative Filtering} (UBCF) didasarkan pada premis bahwa pengguna yang memiliki preferensi serupa di masa lampau cenderung memiliki ketertarikan yang serupa terhadap item di masa depan \citep{resnick1994grouplens}. 
+
+Derajat kesamaan preferensi antara dua pengguna $u$ dan $v$ dihitung menggunakan koefisien korelasi Pearson (\textit{Pearson Correlation Coefficient} / PCC) pada himpunan item yang dinilai bersama $I_{uv} = I_u \cap I_v$:
+\begin{equation}
+\label{eq:pcc}
+\text{sim}(u, v) = \frac{\sum_{i \in I_{uv}} (r_{u,i} - \bar{r}_u)(r_{v,i} - \bar{r}_v)}{\sqrt{\sum_{i \in I_{uv}} (r_{u,i} - \bar{r}_u)^2} \sqrt{\sum_{i \in I_{uv}} (r_{v,i} - \bar{r}_v)^2}}
+\end{equation}
+di mana $\bar{r}_u$ dan $\bar{r}_v$ masing-masing menyatakan nilai rata-rata rating historis pengguna $u$ dan $v$.
+
+Untuk mencegah bias yang ditimbulkan oleh pasangan pengguna yang hanya mengevaluasi sedikit item bersama ($|I_{uv}|$ kecil), diterapkan teknik pembobotan signifikansi (\textit{significance weighting}) dengan ambang batas $\gamma$:
+\begin{equation}
+\label{eq:sig_weight_u}
+w_{uv} = \text{sim}(u, v) \cdot \frac{\min(|I_{uv}|, \gamma)}{\gamma}
+\end{equation}
+Setelah menghitung kesamaan, dipilih $k$ pengguna paling mirip yang telah memberikan rating pada item $i$, dinotasikan sebagai himpunan ketetanggaan $N_i(u)$. Nilai estimasi rating $\hat{r}_{u,i}$ dihitung melalui rerata terbobot berbasis deviasi (\textit{deviation-from-mean}):
+\begin{equation}
+\label{eq:ubcf_pred}
+\hat{r}_{u,i} = \bar{r}_u + \frac{\sum_{v \in N_i(u)} w_{uv} (r_{v,i} - \bar{r}_v)}{\sum_{v \in N_i(u)} |w_{uv}|}
+\end{equation}
+Formulasi deviasi pada Persamaan (\ref{eq:ubcf_pred}) menjamin kompensasi terhadap bias kecenderungan pengguna yang terbiasa memberikan rentang rating tinggi (\textit{optimistic rater}) maupun rendah (\textit{critical rater}).
+
+\section{Item-Based Collaborative Filtering (IBCF)}
+\textit{Item-Based Collaborative Filtering} (IBCF) mengatasi kendala komputasi UBCF pada sistem berskala besar di mana jumlah pengguna jauh melampaui jumlah item ($|U| \gg |I|$) \citep{sarwar2001item}. IBCF memprediksi rating pengguna terhadap suatu item berdasarkan rating yang telah diberikan pengguna tersebut pada item-item lain yang serupa.
+
+Penggunaan kesamaan kosinus biasa (\textit{Cosine Similarity}) pada data rating cenderung menghasilkan bias karena mengabaikan disparitas skala penilaian antar-pengguna. Oleh karena itu, digunakan metrik \textit{Adjusted Cosine Similarity} yang mengurangkan rating dengan nilai rata-rata pengguna $\bar{r}_u$ pada himpunan pengguna bersama $U_{ij} = U_i \cap U_j$:
+\begin{equation}
+\label{eq:adj_cos}
+\text{sim}(i, j) = \frac{\sum_{u \in U_{ij}} (r_{u,i} - \bar{r}_u)(r_{u,j} - \bar{r}_u)}{\sqrt{\sum_{u \in U_{ij}} (r_{u,i} - \bar{r}_u)^2} \sqrt{\sum_{u \in U_{ij}} (r_{u,j} - \bar{r}_u)^2}}
+\end{equation}
+Serupa dengan UBCF, bobot signifikansi dengan parameter penalti $\gamma$ diterapkan untuk item dengan sedikit evaluator bersama:
+\begin{equation}
+\label{eq:sig_weight_i}
+w_{ij} = \text{sim}(i, j) \cdot \frac{\min(|U_{ij}|, \gamma)}{\gamma}
+\end{equation}
+Estimasi rating $\hat{r}_{u,i}$ dihitung menggunakan kombinasi terbobot dari $k$ item terdekat yang telah dinilai oleh pengguna $u$, dinotasikan sebagai $N_u(i)$:
+\begin{equation}
+\label{eq:ibcf_pred}
+\hat{r}_{u,i} = \frac{\sum_{j \in N_u(i)} w_{ij} \, r_{u,j}}{\sum_{j \in N_u(i)} |w_{ij}|}
+\end{equation}
+
+\section{Matrix Factorization berbasis Stochastic Gradient Descent (SGD)}
+\textit{Matrix Factorization} (MF) merupakan pendekatan \textit{model-based} yang memetakan pengguna dan item ke dalam ruang faktor laten berdimensi rendah $K$ ($K \ll \min(|U|, |I|)$), sehingga interaksi pengguna-item dimodelkan sebagai hasil perkalian titik (\textit{inner product}) dalam ruang laten tersebut \citep{koren2009matrix}.
+
+Model faktorisasi standar dilengkapi komponen bias untuk menangkap kecenderungan global, bias pengguna, dan bias item:
+\begin{equation}
+\label{eq:mf_pred}
+\hat{r}_{u,i} = \mu + b_u + b_i + p_u^T q_i
+\end{equation}
+di mana $\mu$ adalah rata-rata rating global pada data latih, $b_u \in \mathbb{R}$ adalah parameter bias pengguna $u$, $b_i \in \mathbb{R}$ adalah parameter bias item $i$, $p_u \in \mathbb{R}^K$ adalah vektor faktor laten pengguna $u$, dan $q_i \in \mathbb{R}^K$ adalah vektor faktor laten item $i$.
+
+Optimalisasi parameter dilakukan dengan meminimalkan fungsi kerugian kuadrat ter-regularisasi $L_2$ terhadap seluruh pasangan teramati $\mathcal{K}$:
+\begin{equation}
+\label{eq:mf_loss}
+\mathcal{L} = \sum_{(u, i) \in \mathcal{K}} \left(r_{u,i} - \hat{r}_{u,i}\right)^2 + \beta \left(b_u^2 + b_i^2 + \|p_u\|_2^2 + \|q_i\|_2^2\right)
+\end{equation}
+di mana $\beta$ merupakan parameter regularisasi untuk mencegah gejala \textit{overfitting}.
+
+Optimalisasi diselesaikan menggunakan algoritma \textit{Stochastic Gradient Descent} (SGD). Untuk setiap sampel $(u, i, r_{u,i}) \in \mathcal{K}$, residual error dihitung sebagai:
+\begin{equation}
+\label{eq:mf_error}
+e_{u,i} = r_{u,i} - \hat{r}_{u,i}
+\end{equation}
+Pembaruan parameter dilakukan ke arah kebalikan gradien dengan laju pembelajaran (\textit{learning rate}) $\alpha$:
+\begin{align}
+b_u &\leftarrow b_u + \alpha (e_{u,i} - \beta b_u) \label{eq:sgd_bu} \\
+b_i &\leftarrow b_i + \alpha (e_{u,i} - \beta b_i) \label{eq:sgd_bi} \\
+p_u &\leftarrow p_u + \alpha (e_{u,i} q_i - \beta p_u) \label{eq:sgd_pu} \\
+q_i &\leftarrow q_i + \alpha (e_{u,i} p_u - \beta q_i) \label{eq:sgd_qi}
+\end{align}
+
+\section{Metrik Evaluasi Sistem Rekomendasi}
+Evaluasi kinerja sistem rekomendasi dilakukan secara multi-dimensi, mencakup akurasi prediksi nilai rating eksplisit dan ketepatan perankingan daftar rekomendasi \citep{baizal2024recsys}. Misalkan $T$ adalah himpunan pasangan uji yang berisi nilai rating aktual $r_{u,i}$ dan nilai rating prediksi $\hat{r}_{u,i}$.
+
+\subsection{Metrik Kesalahan Prediksi Rating}
+\begin{enumerate}
+    \item \textbf{Mean Absolute Error (MAE)}: Mengukur rata-rata magnitudo kesalahan absolut tanpa mempertimbangkan arah penyimpangan:
+    \begin{equation}
+    \label{eq:mae}
+    \text{MAE} = \frac{1}{|T|} \sum_{(u,i) \in T} |r_{u,i} - \hat{r}_{u,i}|
+    \end{equation}
+    \item \textbf{Mean Squared Error (MSE)}: Mengukur rata-rata kuadrat kesalahan:
+    \begin{equation}
+    \label{eq:mse}
+    \text{MSE} = \frac{1}{|T|} \sum_{(u,i) \in T} (r_{u,i} - \hat{r}_{u,i})^2
+    \end{equation}
+    \item \textbf{Root Mean Squared Error (RMSE)}: Akar kuadrat dari MSE yang memberikan bobot penalti lebih besar pada galat bernilai ekstrem:
+    \begin{equation}
+    \label{eq:rmse}
+    \text{RMSE} = \sqrt{\text{MSE}} = \sqrt{\frac{1}{|T|} \sum_{(u,i) \in T} (r_{u,i} - \hat{r}_{u,i})^2}
+    \end{equation}
+    \item \textbf{Normalized Mean Squared Error (NMSE)}: Menormalisasi MSE terhadap rentang skala penilaian teoritis $(r_{\max} - r_{\min})^2$:
+    \begin{equation}
+    \label{eq:nmse}
+    \text{NMSE} = \frac{\text{MSE}}{(r_{\max} - r_{\min})^2}
+    \end{equation}
+    Pada skala MovieLens di mana rating berkisar antara 1 hingga 5, nilai rentang adalah $5 - 1 = 4$, sehingga penyebutnya bernilai $4^2 = 16$.
+\end{enumerate}
+
+\subsection{Metrik Perankingan: Normalized Discounted Cumulative Gain (NDCG@k)}
+Metrik perankingan mengevaluasi kemampuan algoritma dalam menempatkan item yang disukai pengguna pada posisi teratas daftar rekomendasi berukuran $k$ \citep{jarvelin2002cumulated}.
+
+Nilai \textit{Discounted Cumulative Gain} pada peringkat $k$ untuk pengguna $u$ dirumuskan sebagai:
+\begin{equation}
+\label{eq:dcg}
+\text{DCG}@k(u) = \sum_{p=1}^k \frac{2^{rel(u, \pi(p))} - 1}{\log_2(p + 1)}
+\end{equation}
+di mana $\pi(p)$ adalah item pada posisi ke-$p$ setelah daftar diurutkan berdasarkan prediksi rating $\hat{r}_{u,i}$ secara menurun. Nilai relevansi biner $rel(u, i)$ bernilai 1 jika rating aktual $r_{u,i} \ge 4$ (kategori disukai/puas) dan 0 jika sebaliknya.
+
+Nilai \textit{Ideal DCG} ($\text{IDCG}@k$) dihitung dengan mengurutkan item berdasarkan relevansi aktual yang sempurna secara menurun:
+\begin{equation}
+\label{eq:idcg}
+\text{IDCG}@k(u) = \sum_{p=1}^{\min(k, |R_u^+|)} \frac{2^1 - 1}{\log_2(p + 1)}
+\end{equation}
+di mana $|R_u^+|$ menyatakan jumlah item relevan yang dimiliki pengguna $u$ pada data uji. Nilai normalisasi NDCG@k diperoleh melalui:
+\begin{equation}
+\label{eq:ndcg}
+\text{NDCG}@k(u) = \begin{cases}
+\frac{\text{DCG}@k(u)}{\text{IDCG}@k(u)}, & \text{jika } \text{IDCG}@k(u) > 0 \\
+1, & \text{jika } \text{IDCG}@k(u) = 0
+\end{cases}
+\end{equation}
+Skor akhir NDCG@k sistem merupakan rata-rata nilai NDCG@k untuk seluruh pengguna yang memiliki item pada data uji.
+
+\section{Protokol Validasi 5-Fold Cross-Validation dan Uji Signifikansi Statistik}
+Untuk memperoleh estimasi performa generalisasi yang tidak bias dan tahan terhadap variasi pembagian data, digunakan skema $K$-\textit{fold cross-validation} dengan $K=5$. Dataset dipartisi menjadi lima subset disjoin $\{D_1, D_2, \dots, D_5\}$ yang seimbang. Pada setiap iterasi $f \in \{1, \dots, 5\}$, subset $D_f$ bertindak sebagai data uji ($T$) dan gabungan empat subset lainnya bertindak sebagai data latih ($Tr$). Rerata performa dilaporkan beserta standar deviasinya:
+\begin{equation}
+\label{eq:mean_sd}
+\bar{M} = \frac{1}{K}\sum_{f=1}^K M_f, \quad \sigma_M = \sqrt{\frac{1}{K-1}\sum_{f=1}^K (M_f - \bar{M})^2}
+\end{equation}
+
+Untuk menguji apakah perbedaan performa antar-algoritma signifikan secara statistik dan bukan akibat fluktuasi acak, dilakukan uji t berpasangan (\textit{Paired Student's t-test}) \citep{takacs2009scalable}. Hipotesis nol ($H_0$) menyatakan bahwa selisih rata-rata metrik antara dua model bernilai nol ($\mu_d = 0$). Statistik $t$ dihitung sebagai:
+\begin{equation}
+\label{eq:paired_t}
+t = \frac{\bar{d}}{s_d / \sqrt{K}}
+\end{equation}
+di mana $\bar{d}$ adalah rata-rata selisih metrik pada 5 \textit{fold}, $s_d$ adalah standar deviasi selisih, dan derajat kebebasan bernilai $df = K - 1 = 4$. Perbedaan dinyatakan signifikan secara statistik apabila $p\text{-value} < 0,05$.
