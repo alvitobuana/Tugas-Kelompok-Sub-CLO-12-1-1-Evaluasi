@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+desktop.ini
+# dataset tidak diunggah; unduh ulang dari GroupLens (lihat README)
+data/
+# berisi NIM anggota; tidak diunggah ke repository publik
+info_kelompok.md
