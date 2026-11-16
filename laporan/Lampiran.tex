@@ -2,31 +2,29 @@
 \addcontentsline{toc}{section}{Lampiran A: Log Penalaan Hyperparameter Matrix Factorization}
 \section*{Lampiran A: Log Penalaan Hyperparameter Matrix Factorization}
 
-Tabel \ref{tab:lampiran_tuning} merangkum cuplikan hasil eksplorasi \textit{grid search} penalaan hyperparameter pada algoritma Matrix Factorization berbasis SGD untuk menemukan konfigurasi optimum pada dataset MovieLens 100K.
+Penalaan hyperparameter Matrix Factorization dilakukan tanpa memakai data uji. Data latih fold 1 (\texttt{u1.base}) dibagi lagi menjadi 90\% data latih (72.106 rating) dan 10\% data validasi (7.894 rating). Setiap konfigurasi dilatih dan RMSE validasinya dicatat per epoch (\texttt{scripts/mf\_tuning.py}, hasil di \texttt{results/mf\_tuning.csv}). Tabel \ref{tab:lampiran_tuning} memuat RMSE validasi terbaik tiap kombinasi $K$ dan $\beta$ pada $\alpha = 0,01$, beserta epoch tercapainya.
 
 \begin{table}[htbp]
 \centering
-\caption{Hasil penalaan hyperparameter Matrix Factorization (Fold 1)}
+\caption{RMSE validasi terbaik tiap kombinasi $K$ dan $\beta$ ($\alpha = 0,01$); angka dalam kurung adalah epoch tercapainya}
 \label{tab:lampiran_tuning}
-\resizebox{\linewidth}{!}{
-\begin{tabular}{c c c c c c c}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l c c c c c}
 \toprule
-\textbf{No} & \shortstack{\textbf{Faktor Laten}\\\textbf{($K$)}} & \shortstack{\textbf{Laju Belajar}\\\textbf{($\alpha$)}} & \shortstack{\textbf{Regularisasi}\\\textbf{($\beta$)}} & \textbf{Epoch} & \shortstack{\textbf{MAE}\\\textbf{Uji}} & \shortstack{\textbf{RMSE}\\\textbf{Uji}} \\
+ & $\beta = 0,02$ & $\beta = 0,1$ & $\beta = 0,2$ & $\beta = 0,3$ & $\beta = 0,5$ \\
 \midrule
-1 & 20 & 0,005 & 0,10 & 20 & 0,7621 & 0,9584 \\
-2 & 20 & 0,010 & 0,20 & 30 & 0,7498 & 0,9412 \\
-3 & 50 & 0,005 & 0,20 & 30 & 0,7456 & 0,9378 \\
-4 & 50 & 0,010 & 0,20 & 35 & 0,7421 & 0,9335 \\
-\textbf{5} & \textbf{100} & \textbf{0,010} & \textbf{0,20} & \textbf{35} & \textbf{0,7409} & \textbf{0,9319} \\
-6 & 100 & 0,020 & 0,20 & 35 & 0,7435 & 0,9352 \\
-7 & 100 & 0,010 & 0,05 & 35 & 0,7512 & 0,9488 \\
-8 & 150 & 0,010 & 0,20 & 40 & 0,7412 & 0,9324 \\
+$K = 5$   & 0,9621 (26) & 0,9439 (26) & --- & --- & --- \\
+$K = 10$  & 0,9796 (3)  & 0,9580 (18) & --- & --- & --- \\
+$K = 20$  & 0,9732 (3)  & 0,9543 (12) & 0,9276 (56) & --- & --- \\
+$K = 50$  & 0,9663 (3)  & 0,9413 (10) & 0,9185 (48) & 0,9249 (100) & --- \\
+$K = 100$ & ---         & 0,9274 (17) & \textbf{0,9140 (35)} & 0,9257 (64) & 0,9686 (64) \\
+$K = 200$ & ---         & ---         & 0,9157 (43) & 0,9262 (84) & --- \\
 \bottomrule
 \end{tabular}
-}
 \end{table}
 
-Berdasarkan eksplorasi empiris, konfigurasi nomor 5 ($K=100$, $\alpha=0,01$, $\beta=0,2$, epoch=35) menghasilkan trade-off performa RMSE dan stabilitas generalisasi paling optimum tanpa mengalami gejala \textit{overfitting}.
+Pencarian dilakukan bertahap. Tahap pertama membandingkan laju pembelajaran $\alpha \in \{0,0002;\ 0,005;\ 0,01\}$ pada $K=20$ dan $\beta=0,02$ (Gambar \ref{fig:mf_lr}). Tahap kedua mencoba $K \in \{5, 10, 20, 50\}$ dan $\beta \in \{0,02;\ 0,1\}$; hasil terbaiknya ($K=50$, $\beta=0,1$) berada di ujung rentang yang dicoba, sehingga rentang diperluas dua kali ($\beta$ sampai 0,5, $K$ sampai 200, dan maksimum 100 epoch pada perluasan kedua). Pencarian dihentikan setelah nilai terbaik diapit nilai yang lebih buruk di kedua sisi. Konfigurasi yang dipakai adalah $K=100$, $\alpha=0,01$, $\beta=0,2$, dan 35 epoch (RMSE validasi 0,9140).
 
 \vspace{1cm}
 \addcontentsline{toc}{section}{Lampiran B: Rekapitulasi Kendala Teknis dan Solusi Implementasi}
@@ -47,7 +45,7 @@ Tabel \ref{tab:lampiran_kendala} menyajikan rekapitulasi kendala teknis yang dih
 \addlinespace
 2 & Pasangan pengguna atau film dengan sedikit evaluator bersama menghasilkan korelasi palsu bernilai ekstrem ($\pm 1,0$). & Mengintegrasikan pembobotan signifikansi (\textit{significance weighting}) dengan ambang batas $\gamma = 50$ pada modul UBCF dan IBCF. \\
 \addlinespace
-3 & Pengguna atau film baru pada data uji tidak memiliki riwayat rating pada data latih (\textit{cold-start}). & Menerapkan arsitektur \textit{fallback} hierarkis: rata-rata pengguna $\bar{r}_u$, rata-rata film $\bar{r}_i$, atau rata-rata global $\mu$. \\
+3 & Di setiap \textit{fold} ada 22--34 film pada data uji yang tidak memiliki rating pada data latih (\textit{cold-start}). & Jika tidak ada informasi untuk memprediksi, UBCF, IBCF, dan MF memakai nilai cadangan rata-rata rating pengguna $\bar{r}_u$. Pada \textit{baseline} rata-rata film dipakai rata-rata global $\mu$. \\
 \addlinespace
 4 & Estimasi rating linier pada faktorisasi matriks menghasilkan nilai di luar batas domain valid ($< 1$ atau $> 5$). & Menerapkan pemotongan nilai (\textit{value clipping}) ke dalam rentang sah $[1, 5]$ pada fungsi prediksi akhir. \\
 \addlinespace

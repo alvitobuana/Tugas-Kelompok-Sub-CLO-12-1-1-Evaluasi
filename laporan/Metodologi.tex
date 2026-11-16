@@ -43,7 +43,7 @@ Tahapan dimulai dengan pengunduhan berkas dataset MovieLens 100K dari peladen re
 \section{Spesifikasi Dataset dan Protokol Partisi Data}
 Eksperimen menggunakan dataset publik MovieLens 100K yang dihimpun oleh GroupLens Research pada University of Minnesota \citep{harper2015movielens}. Integritas arsip \texttt{ml-100k.zip} divalidasi terhadap nilai hash SHA-256 resmi:
 \begin{center}
-\texttt{0e338c2e4a32958372f8113bfab5eed077d448379be25c6199e3df2dae69f350}
+{\footnotesize\texttt{50d2a982c66986937beb9ffb3aa76efe955bf3d5c6b761f4e3a7cd717c6a3229}}
 \end{center}
 Karakteristik fundamental dataset dirangkum pada Tabel \ref{tab:karakteristik_dataset}.
 
@@ -85,7 +85,7 @@ Model \textit{baseline} berfungsi sebagai tolok ukur batas bawah (\textit{lower 
     \begin{equation}
     \hat{r}_{u,i} = \bar{r}_u = \frac{1}{|I_u|} \sum_{j \in I_u} r_{u,j}
     \end{equation}
-    Jika pengguna $u$ belum pernah menilai item pada data latih, prediksi menggunakan nilai cadangan (\textit{fallback}) $\mu$.
+    Setiap pengguna memiliki rating pada data latih, sehingga nilai ini selalu tersedia.
     \item \textbf{Rata-rata Film (Item Mean)}: Mengasumsikan kualitas inheren suatu film konstan sebesar rata-rata rating yang diterimanya dari seluruh penonton:
     \begin{equation}
     \hat{r}_{u,i} = \bar{r}_i = \frac{1}{|U_i|} \sum_{v \in U_i} r_{v,i}
@@ -94,31 +94,38 @@ Model \textit{baseline} berfungsi sebagai tolok ukur batas bawah (\textit{lower 
 \end{enumerate}
 
 \section{Skenario Algoritma Rekomendasi dan Penalaan Parameter}
-Tiga algoritma rekomendasi utama dikonfigurasi berdasarkan hasil penalaan parameter empiris:
+Konfigurasi tiga algoritma rekomendasi utama adalah sebagai berikut. Parameter UBCF dan IBCF ditetapkan dari materi perkuliahan dan literatur sebelum hasil dilihat, sedangkan parameter Matrix Factorization dipilih dengan data validasi yang terpisah dari data uji.
 \begin{enumerate}
     \item \textbf{User-Based Collaborative Filtering (UBCF)}:
     \begin{itemize}
         \item Metrik kesamaan: Koefisien Korelasi Pearson (PCC).
         \item Pembobotan signifikansi: $\gamma = 50$ (memberikan diskon linear pada pengguna bersama di bawah 50 item).
-        \item Jumlah tetangga terdekat: $k = 30$ (diuji pada rentang sensitivitas $k \in \{5, 10, 20, 30, 40, 50, 75, 100\}$).
-        \item Penanganan kasus khusus: Jika tidak ada tetangga terdekat yang pernah menilai item $i$, nilai prediksi menggunakan rata-rata pengguna $\bar{r}_u$.
+        \item Jumlah tetangga terdekat: $k = 30$, mengikuti saran slide perkuliahan (20--50 tetangga). Sensitivitas diperiksa pada $k$ = 10, 20, 30, 50, dan 100 di fold 1.
+        \item Hanya tetangga dengan kesamaan positif yang dipakai.
+        \item Penanganan kasus khusus: Jika tidak ada tetangga yang pernah menilai item $i$, nilai prediksi menggunakan rata-rata pengguna $\bar{r}_u$.
+        \item Seluruh prediksi dipotong ke rentang $[1, 5]$.
     \end{itemize}
     
     \item \textbf{Item-Based Collaborative Filtering (IBCF)}:
     \begin{itemize}
         \item Metrik kesamaan: \textit{Adjusted Cosine Similarity} (mengoreksi bias rerata pengguna).
         \item Pembobotan signifikansi: $\gamma = 50$.
-        \item Jumlah tetangga terdekat: $k = 30$ (diuji pada rentang sensitivitas $k \in \{5, 10, 20, 30, 40, 50, 75, 100\}$).
-        \item Penanganan kasus khusus: Jika pengguna belum pernah menilai item yang mirip dengan item $i$, prediksi menggunakan rata-rata film $\bar{r}_i$.
+        \item Jumlah tetangga terdekat: $k = 30$, mengikuti ukuran tetangga pada penelitian Sarwar dkk. \citep{sarwar2001item}, dan $\gamma$ disamakan dengan UBCF agar perbandingan adil. Sensitivitas diperiksa pada $k$ = 10, 20, 30, 50, dan 100 di fold 1.
+        \item Hanya item dengan kesamaan positif yang dipakai.
+        \item Penanganan kasus khusus: Jika pengguna belum pernah menilai item yang mirip dengan item $i$, prediksi menggunakan rata-rata pengguna $\bar{r}_u$.
+        \item Seluruh prediksi dipotong ke rentang $[1, 5]$.
     \end{itemize}
     
     \item \textbf{Matrix Factorization (SGD)}:
     \begin{itemize}
         \item Jumlah faktor laten: $K = 100$.
-        \item Laju pembelajaran (\textit{learning rate}): $\alpha = 0,01$ (diuji pada variasi $\alpha \in \{0,001, 0,005, 0,01, 0,02\}$).
+        \item Laju pembelajaran (\textit{learning rate}): $\alpha = 0,01$ (dibandingkan dengan $\alpha \in \{0,0002;\ 0,005;\ 0,01\}$).
         \item Parameter penalti regularisasi $L_2$: $\beta = 0,2$ (mencegah pembesaran magnitudo bobot laten).
         \item Jumlah siklus iterasi: 35 \textit{epochs}.
-        \item Inisialisasi bobot laten: $p_u, q_i \sim \mathcal{N}(0, 1/\sqrt{K})$ dan bias $b_u, b_i = 0$.
+        \item Pemilihan parameter: data latih fold 1 dibagi menjadi 90\% data latih dan 10\% data validasi; $K$, $\alpha$, $\beta$, dan jumlah epoch dipilih dari RMSE validasi (Lampiran A). Konfigurasi yang sama lalu dipakai pada kelima \textit{fold}.
+        \item Inisialisasi bobot laten: acak seragam antara 0 dan $s$, dengan $s = 2\sqrt{\mu / K}$, sehingga rata-rata prediksi awal mendekati rata-rata rating $\mu$. Model tidak memakai komponen bias.
+        \item Urutan rating diacak pada setiap epoch.
+        \item Penanganan kasus khusus: film tanpa rating pada data latih diprediksi dengan rata-rata pengguna $\bar{r}_u$.
         \item Batasan prediksi (\textit{clipping}): Seluruh estimasi akhir dipotong ke dalam batas interval sah $[1, 5]$.
     \end{itemize}
 \end{enumerate}
@@ -126,7 +133,7 @@ Tiga algoritma rekomendasi utama dikonfigurasi berdasarkan hasil penalaan parame
 \section{Verifikasi Kebenaran Kode dan Penjaminan Mutu Perangkat Lunak}
 Untuk menjamin integritas saintifik sebelum menjalankan komputasi 5-\textit{fold}, dilakukan prosedur verifikasi ganda:
 \begin{enumerate}
-    \item \textbf{Sanity Check terhadap Silabus}: Mengimplementasikan uji asersi otomatis (\textit{unit assertion}) yang memverifikasi bahwa keluaran fungsi metrik pada modul \texttt{src/metrics.py} menghasilkan nilai yang identik secara presisi dengan contoh perhitungan manual pada slide materi perkuliahan Sistem Pemberi Rekomendasi \citep{baizal2024recsys}. Sembilan skenario uji asersi berhasil dilewati dengan galat mutlak nol ($|y_{\text{calc}} - y_{\text{slide}}| < 10^{-6}$).
-    \item \textbf{Automated Test Suite}: Seluruh modul sistem pada direktori \texttt{src/} dilindungi oleh 19 \textit{unit test} komprehensif pada pustaka uji \texttt{tests/}, mencakup uji validasi integritas data, perhitungan kesamaan matriks ber-sparsitas tinggi, kestabilan konvergensi SGD, dan skema validasi silang.
+    \item \textbf{Sanity Check terhadap Silabus}: Mengimplementasikan uji asersi otomatis (\textit{unit assertion}) yang memverifikasi bahwa keluaran fungsi metrik pada modul \texttt{src/metrics.py} menghasilkan nilai yang sama dengan contoh perhitungan pada slide materi perkuliahan Sistem Pemberi Rekomendasi \citep{baizal2024recsys}. Sembilan pemeriksaan lolos, dengan toleransi $10^{-6}$ untuk MAE, MSE, RMSE, dan NMSE, serta $10^{-3}$ untuk DCG, IDCG, dan NDCG karena angka pada slide dibulatkan tiga desimal.
+    \item \textbf{Automated Test Suite}: Terdapat 19 \textit{unit test} pada direktori \texttt{tests/} yang menguji metrik (5), UBCF (3), IBCF (4), MF (3), dan \textit{baseline} (4) terhadap contoh hitungan pada slide, misalnya korelasi Pearson dan prediksi Alice (4,87), \textit{adjusted cosine} (0,80), serta rekonstruksi matriks contoh $5 \times 4$.
     \item \textbf{Arsitektur Caching}: Hasil komputasi matriks kesamaan dan pelatihan model disimpan secara deterministik pada direktori \texttt{results/cache/} guna mempercepat proses eksekusi ulang (\textit{re-run}) tanpa mengubah determinisme numerik.
 \end{enumerate}

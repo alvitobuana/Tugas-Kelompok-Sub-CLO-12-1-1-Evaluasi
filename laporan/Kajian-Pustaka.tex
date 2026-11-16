@@ -18,14 +18,14 @@ Derajat kesamaan preferensi antara dua pengguna $u$ dan $v$ dihitung menggunakan
 \label{eq:pcc}
 \text{sim}(u, v) = \frac{\sum_{i \in I_{uv}} (r_{u,i} - \bar{r}_u)(r_{v,i} - \bar{r}_v)}{\sqrt{\sum_{i \in I_{uv}} (r_{u,i} - \bar{r}_u)^2} \sqrt{\sum_{i \in I_{uv}} (r_{v,i} - \bar{r}_v)^2}}
 \end{equation}
-di mana $\bar{r}_u$ dan $\bar{r}_v$ masing-masing menyatakan nilai rata-rata rating historis pengguna $u$ dan $v$.
+di mana $\bar{r}_u$ dan $\bar{r}_v$ pada persamaan ini adalah rata-rata rating pengguna $u$ dan $v$ pada item yang dinilai bersama, sesuai contoh hitungan pada slide perkuliahan. Pasangan dengan kurang dari dua item bersama diberi kesamaan 0, karena korelasi tidak terdefinisi.
 
 Untuk mencegah bias yang ditimbulkan oleh pasangan pengguna yang hanya mengevaluasi sedikit item bersama ($|I_{uv}|$ kecil), diterapkan teknik pembobotan signifikansi (\textit{significance weighting}) dengan ambang batas $\gamma$:
 \begin{equation}
 \label{eq:sig_weight_u}
 w_{uv} = \text{sim}(u, v) \cdot \frac{\min(|I_{uv}|, \gamma)}{\gamma}
 \end{equation}
-Setelah menghitung kesamaan, dipilih $k$ pengguna paling mirip yang telah memberikan rating pada item $i$, dinotasikan sebagai himpunan ketetanggaan $N_i(u)$. Nilai estimasi rating $\hat{r}_{u,i}$ dihitung melalui rerata terbobot berbasis deviasi (\textit{deviation-from-mean}):
+Setelah menghitung kesamaan, dipilih $k$ pengguna paling mirip dengan kesamaan positif yang telah memberikan rating pada item $i$, dinotasikan sebagai himpunan ketetanggaan $N_i(u)$. Pada tahap prediksi, $\bar{r}_u$ dan $\bar{r}_v$ adalah rata-rata seluruh rating masing-masing pengguna. Nilai estimasi rating $\hat{r}_{u,i}$ dihitung melalui rerata terbobot berbasis deviasi (\textit{deviation-from-mean}):
 \begin{equation}
 \label{eq:ubcf_pred}
 \hat{r}_{u,i} = \bar{r}_u + \frac{\sum_{v \in N_i(u)} w_{uv} (r_{v,i} - \bar{r}_v)}{\sum_{v \in N_i(u)} |w_{uv}|}
@@ -54,17 +54,17 @@ Estimasi rating $\hat{r}_{u,i}$ dihitung menggunakan kombinasi terbobot dari $k$
 \section{Matrix Factorization berbasis Stochastic Gradient Descent (SGD)}
 \textit{Matrix Factorization} (MF) merupakan pendekatan \textit{model-based} yang memetakan pengguna dan item ke dalam ruang faktor laten berdimensi rendah $K$ ($K \ll \min(|U|, |I|)$), sehingga interaksi pengguna-item dimodelkan sebagai hasil perkalian titik (\textit{inner product}) dalam ruang laten tersebut \citep{koren2009matrix}.
 
-Model faktorisasi standar dilengkapi komponen bias untuk menangkap kecenderungan global, bias pengguna, dan bias item:
+Penelitian ini memakai bentuk dasar tanpa komponen bias, sesuai materi perkuliahan. Matriks rating didekati dengan $R \approx P Q^T$, sehingga prediksi rating adalah:
 \begin{equation}
 \label{eq:mf_pred}
-\hat{r}_{u,i} = \mu + b_u + b_i + p_u^T q_i
+\hat{r}_{u,i} = p_u^T q_i = \sum_{k=1}^{K} p_{uk}\, q_{ik}
 \end{equation}
-di mana $\mu$ adalah rata-rata rating global pada data latih, $b_u \in \mathbb{R}$ adalah parameter bias pengguna $u$, $b_i \in \mathbb{R}$ adalah parameter bias item $i$, $p_u \in \mathbb{R}^K$ adalah vektor faktor laten pengguna $u$, dan $q_i \in \mathbb{R}^K$ adalah vektor faktor laten item $i$.
+di mana $p_u \in \mathbb{R}^K$ adalah vektor faktor laten pengguna $u$ (baris matriks $P$) dan $q_i \in \mathbb{R}^K$ adalah vektor faktor laten item $i$ (baris matriks $Q$).
 
 Optimalisasi parameter dilakukan dengan meminimalkan fungsi kerugian kuadrat ter-regularisasi $L_2$ terhadap seluruh pasangan teramati $\mathcal{K}$:
 \begin{equation}
 \label{eq:mf_loss}
-\mathcal{L} = \sum_{(u, i) \in \mathcal{K}} \left(r_{u,i} - \hat{r}_{u,i}\right)^2 + \beta \left(b_u^2 + b_i^2 + \|p_u\|_2^2 + \|q_i\|_2^2\right)
+\mathcal{L} = \sum_{(u, i) \in \mathcal{K}} \left[ \left(r_{u,i} - p_u^T q_i\right)^2 + \frac{\beta}{2} \left(\|p_u\|_2^2 + \|q_i\|_2^2\right) \right]
 \end{equation}
 di mana $\beta$ merupakan parameter regularisasi untuk mencegah gejala \textit{overfitting}.
 
@@ -75,11 +75,10 @@ e_{u,i} = r_{u,i} - \hat{r}_{u,i}
 \end{equation}
 Pembaruan parameter dilakukan ke arah kebalikan gradien dengan laju pembelajaran (\textit{learning rate}) $\alpha$:
 \begin{align}
-b_u &\leftarrow b_u + \alpha (e_{u,i} - \beta b_u) \label{eq:sgd_bu} \\
-b_i &\leftarrow b_i + \alpha (e_{u,i} - \beta b_i) \label{eq:sgd_bi} \\
-p_u &\leftarrow p_u + \alpha (e_{u,i} q_i - \beta p_u) \label{eq:sgd_pu} \\
-q_i &\leftarrow q_i + \alpha (e_{u,i} p_u - \beta q_i) \label{eq:sgd_qi}
+p_u &\leftarrow p_u + \alpha (2\, e_{u,i}\, q_i - \beta p_u) \label{eq:sgd_pu} \\
+q_i &\leftarrow q_i + \alpha (2\, e_{u,i}\, p_u - \beta q_i) \label{eq:sgd_qi}
 \end{align}
+Kedua pembaruan dihitung dari nilai $p_u$ dan $q_i$ sebelum diperbarui. Satu kali melewati seluruh rating latih disebut satu \textit{epoch}, dan urutan rating diacak pada setiap epoch.
 
 \section{Metrik Evaluasi Sistem Rekomendasi}
 Evaluasi kinerja sistem rekomendasi dilakukan secara multi-dimensi, mencakup akurasi prediksi nilai rating eksplisit dan ketepatan perankingan daftar rekomendasi \citep{baizal2024recsys}. Misalkan $T$ adalah himpunan pasangan uji yang berisi nilai rating aktual $r_{u,i}$ dan nilai rating prediksi $\hat{r}_{u,i}$.
@@ -101,12 +100,12 @@ Evaluasi kinerja sistem rekomendasi dilakukan secara multi-dimensi, mencakup aku
     \label{eq:rmse}
     \text{RMSE} = \sqrt{\text{MSE}} = \sqrt{\frac{1}{|T|} \sum_{(u,i) \in T} (r_{u,i} - \hat{r}_{u,i})^2}
     \end{equation}
-    \item \textbf{Normalized Mean Squared Error (NMSE)}: Menormalisasi MSE terhadap rentang skala penilaian teoritis $(r_{\max} - r_{\min})^2$:
+    \item \textbf{Normalized Mean Squared Error (NMSE)}: Menormalisasi MSE terhadap rentang skala rating, sesuai rumus pada slide perkuliahan:
     \begin{equation}
     \label{eq:nmse}
-    \text{NMSE} = \frac{\text{MSE}}{(r_{\max} - r_{\min})^2}
+    \text{NMSE} = \frac{\text{MSE}}{r_{\max} - r_{\min}}
     \end{equation}
-    Pada skala MovieLens di mana rating berkisar antara 1 hingga 5, nilai rentang adalah $5 - 1 = 4$, sehingga penyebutnya bernilai $4^2 = 16$.
+    Pada MovieLens rating berkisar antara 1 hingga 5, sehingga penyebutnya bernilai $5 - 1 = 4$.
 \end{enumerate}
 
 \subsection{Metrik Perankingan: Normalized Discounted Cumulative Gain (NDCG@k)}
@@ -115,24 +114,21 @@ Metrik perankingan mengevaluasi kemampuan algoritma dalam menempatkan item yang 
 Nilai \textit{Discounted Cumulative Gain} pada peringkat $k$ untuk pengguna $u$ dirumuskan sebagai:
 \begin{equation}
 \label{eq:dcg}
-\text{DCG}@k(u) = \sum_{p=1}^k \frac{2^{rel(u, \pi(p))} - 1}{\log_2(p + 1)}
+\text{DCG}@k(u) = \sum_{p=1}^k \frac{rel(u, \pi(p))}{\log_2(p + 1)}
 \end{equation}
-di mana $\pi(p)$ adalah item pada posisi ke-$p$ setelah daftar diurutkan berdasarkan prediksi rating $\hat{r}_{u,i}$ secara menurun. Nilai relevansi biner $rel(u, i)$ bernilai 1 jika rating aktual $r_{u,i} \ge 4$ (kategori disukai/puas) dan 0 jika sebaliknya.
+di mana $\pi(p)$ adalah item pada posisi ke-$p$ setelah item milik pengguna $u$ pada data uji diurutkan berdasarkan prediksi rating $\hat{r}_{u,i}$ secara menurun. Nilai relevansi biner $rel(u, i)$ bernilai 1 jika rating aktual $r_{u,i} \ge 4$ dan 0 jika sebaliknya. Karena relevansinya biner, bentuk $2^{rel} - 1$ yang juga muncul pada slide memberi hasil yang sama ($2^1 - 1 = 1$ dan $2^0 - 1 = 0$).
 
 Nilai \textit{Ideal DCG} ($\text{IDCG}@k$) dihitung dengan mengurutkan item berdasarkan relevansi aktual yang sempurna secara menurun:
 \begin{equation}
 \label{eq:idcg}
-\text{IDCG}@k(u) = \sum_{p=1}^{\min(k, |R_u^+|)} \frac{2^1 - 1}{\log_2(p + 1)}
+\text{IDCG}@k(u) = \sum_{p=1}^{\min(k, |R_u^+|)} \frac{1}{\log_2(p + 1)}
 \end{equation}
 di mana $|R_u^+|$ menyatakan jumlah item relevan yang dimiliki pengguna $u$ pada data uji. Nilai normalisasi NDCG@k diperoleh melalui:
 \begin{equation}
 \label{eq:ndcg}
-\text{NDCG}@k(u) = \begin{cases}
-\frac{\text{DCG}@k(u)}{\text{IDCG}@k(u)}, & \text{jika } \text{IDCG}@k(u) > 0 \\
-1, & \text{jika } \text{IDCG}@k(u) = 0
-\end{cases}
+\text{NDCG}@k(u) = \frac{\text{DCG}@k(u)}{\text{IDCG}@k(u)}
 \end{equation}
-Skor akhir NDCG@k sistem merupakan rata-rata nilai NDCG@k untuk seluruh pengguna yang memiliki item pada data uji.
+Pengguna yang tidak memiliki item relevan pada data uji dilewati, karena $\text{IDCG}@k(u) = 0$ sehingga NDCG tidak terdefinisi. Skor akhir NDCG@k merupakan rata-rata nilai NDCG@k seluruh pengguna lainnya.
 
 \section{Protokol Validasi 5-Fold Cross-Validation dan Uji Signifikansi Statistik}
 Untuk memperoleh estimasi performa generalisasi yang tidak bias dan tahan terhadap variasi pembagian data, digunakan skema $K$-\textit{fold cross-validation} dengan $K=5$. Dataset dipartisi menjadi lima subset disjoin $\{D_1, D_2, \dots, D_5\}$ yang seimbang. Pada setiap iterasi $f \in \{1, \dots, 5\}$, subset $D_f$ bertindak sebagai data uji ($T$) dan gabungan empat subset lainnya bertindak sebagai data latih ($Tr$). Rerata performa dilaporkan beserta standar deviasinya:
@@ -141,7 +137,7 @@ Untuk memperoleh estimasi performa generalisasi yang tidak bias dan tahan terhad
 \bar{M} = \frac{1}{K}\sum_{f=1}^K M_f, \quad \sigma_M = \sqrt{\frac{1}{K-1}\sum_{f=1}^K (M_f - \bar{M})^2}
 \end{equation}
 
-Untuk menguji apakah perbedaan performa antar-algoritma signifikan secara statistik dan bukan akibat fluktuasi acak, dilakukan uji t berpasangan (\textit{Paired Student's t-test}) \citep{takacs2009scalable}. Hipotesis nol ($H_0$) menyatakan bahwa selisih rata-rata metrik antara dua model bernilai nol ($\mu_d = 0$). Statistik $t$ dihitung sebagai:
+Untuk menguji apakah perbedaan performa antar-algoritma signifikan secara statistik dan bukan akibat fluktuasi acak, dilakukan uji t berpasangan (\textit{Paired Student's t-test}). Hipotesis nol ($H_0$) menyatakan bahwa selisih rata-rata metrik antara dua model bernilai nol ($\mu_d = 0$). Statistik $t$ dihitung sebagai:
 \begin{equation}
 \label{eq:paired_t}
 t = \frac{\bar{d}}{s_d / \sqrt{K}}

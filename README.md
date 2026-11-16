@@ -119,8 +119,8 @@ pip install -r requirements.txt
 ### 3. Menjalankan Notebook Utama
 
 Buka `notebooks/Evaluasi_RecSys_CF_MF.ipynb` pada Jupyter Notebook / VS Code, lalu pilih **Run All**.
-- Berkat sistem caching (`results/cache/`) dan paralelisasi Matrix Factorization (`joblib`), eksekusi penuh selesai dalam **< 1 menit** (44,8 detik) di CPU.
-- Seluruh grafik disimpan otomatis ke `figures/` dan metrik disimpan ke `results/`.
+- Jika cache `results/cache/` sudah ada, eksekusi penuh selesai dalam **< 1 menit** di CPU. Cache tidak ikut di repository, sehingga eksekusi pertama lebih lama karena Matrix Factorization dilatih di kelima fold (dijalankan paralel dengan `joblib`).
+- Grafik ditampilkan langsung di notebook; berkas di `figures/` adalah grafik yang dipakai laporan. Tabel rata-rata dan simpangan baku disimpan ke `results/`.
 - Notebook berfokus murni pada aspek teknis praktis (pipeline data, visualisasi EDA, sanity check metrik, evaluasi 5-fold CV, tabel, grafik, insight teknis).
 
 ### 4. Mengompilasi Dokumen Laporan LaTeX Formal
@@ -134,7 +134,7 @@ bibtex main
 pdflatex -interaction=nonstopmode main.tex
 pdflatex -interaction=nonstopmode main.tex
 ```
-Dokumen `laporan/main.pdf` (42 halaman) mencakup Cover resmi Kelompok 3 (tanpa lembar pengesahan), Abstrak, Daftar Isi/Gambar/Tabel, Bab I Pendahuluan, Bab II Kajian Pustaka, Bab III Metodologi TikZ, Bab IV Hasil & Pembahasan Komparatif, Bab V Kesimpulan, Daftar Pustaka BibTeX, serta Lampiran penalaan parameter & kendala teknis.
+Dokumen `laporan/main.pdf` (41 halaman) mencakup Cover resmi Kelompok 3 (tanpa lembar pengesahan), Abstrak, Daftar Isi/Gambar/Tabel, Bab I Pendahuluan, Bab II Kajian Pustaka, Bab III Metodologi TikZ, Bab IV Hasil & Pembahasan Komparatif, Bab V Kesimpulan, Daftar Pustaka BibTeX, serta Lampiran penalaan parameter & kendala teknis.
 
 ---
 
@@ -151,9 +151,9 @@ Dokumen `laporan/main.pdf` (42 halaman) mencakup Cover resmi Kelompok 3 (tanpa l
 | **Matrix Factorization** (SGD, $K=100, \beta=0{,}2$) | 0,7357 | **0,8554** | **0,9249** | **0,2138** | **0,8578** |
 
 ### Temuan Utama:
-1. **Reduksi Galat Nyata**: Ketiga algoritma memangkas galat RMSE sebesar 7,5%–9,7% dibandingkan baseline terkuat (`Rata-rata film`).
-2. **Kemenangan Matrix Factorization**: MF mencatatkan RMSE terendah (0,9249) dan peringkat NDCG@10 tertinggi (0,8578), konsisten menang di seluruh 5 fold ($p < 0{,}01$, uji-$t$ berpasangan).
-3. **Ketahanan terhadap Sparsity**: Item-Based CF paling rentan mengalami degradasi akurasi pada film-film bervolume rating rendah (*long-tail*), sementara representasi ruang laten MF memberikan ketahanan generalisasi tertinggi.
+1. **Reduksi Galat Nyata**: Ketiga algoritma memangkas galat RMSE sebesar 7,7%–9,7% dibandingkan baseline terkuat (`Rata-rata film`).
+2. **Kemenangan Matrix Factorization**: MF mencatatkan RMSE terendah (0,9249) dan peringkat NDCG@10 tertinggi (0,8578), konsisten menang di seluruh 5 fold ($p < 0{,}05$, uji-$t$ berpasangan). Pada MAE ketiga metode setara.
+3. **Ketahanan terhadap Sparsity**: Item-Based CF paling terpengaruh pada film dengan sedikit rating (*long-tail*); UBCF dan MF hampir setara pada kelompok ini.
 
 ---
 

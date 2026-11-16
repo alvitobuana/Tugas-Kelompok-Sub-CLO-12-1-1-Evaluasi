@@ -25,10 +25,10 @@ Berdasarkan latar belakang yang telah dipaparkan, perumusan masalah dalam peneli
 \end{enumerate}
 
 \section{Tujuan Penelitian}
-Tujuan yang hendak dicapai dalam pelaksanaan tugas besar penelitian ini adalah:
+Tujuan yang hendak dicapai dalam pelaksanaan tugas kelompok ini adalah:
 \begin{enumerate}
     \item Mengimplementasikan dan mengevaluasi kinerja empat model \textit{baseline}, UBCF, IBCF, dan Matrix Factorization pada dataset MovieLens 100K menggunakan protokol baku 5-\textit{fold cross-validation}.
-    \item Melakukan analisis sensitivitas parameter ukuran ketetanggaan ($k$) pada UBCF dan IBCF guna mengidentifikasi nilai parameter optimal.
+    \item Melakukan analisis sensitivitas parameter ukuran ketetanggaan ($k$) pada UBCF dan IBCF untuk melihat pengaruhnya terhadap kesalahan prediksi.
     \item Mengukur dan membandingkan kualitas perankingan daftar rekomendasi Top-10 antar metode menggunakan metrik NDCG@10 dengan ambang batas kepuasan biner $r \ge 4$.
     \item Melakukan analisis komparatif menyeluruh mencakup akurasi prediksi, perankingan, uji signifikansi statistik berpasangan (\textit{paired t-test}), sebaran residual error, dampak sparsitas data, dan kompleksitas waktu komputasi untuk memberikan rekomendasi pemilihan arsitektur sistem perekomendasi film.
 \end{enumerate}
@@ -38,13 +38,13 @@ Ruang lingkup dan batasan penelitian ini ditetapkan sebagai berikut:
 \begin{enumerate}
     \item \textbf{Dataset}: Menggunakan dataset publik resmi MovieLens 100K yang dirilis oleh GroupLens Research, terdiri atas 100.000 rating dari 943 pengguna terhadap 1.682 film dalam rentang skala rating diskrit bilangan bulat 1 sampai 5.
     \item \textbf{Protokol Evaluasi}: Menggunakan partisi resmi 5-\textit{fold cross-validation} bawaan MovieLens (\texttt{u1.base}/\allowbreak\texttt{u1.test} sampai \texttt{u5.base}/\allowbreak\texttt{u5.test}) dengan rasio 80:20 pada tiap \textit{fold}.
-    \item \textbf{Batasan Pustaka}: Seluruh algoritma perekomendasi, perhitungan kesamaan, optimasi SGD, dan metrik evaluasi diimplementasikan murni dari awal menggunakan bahasa pemrograman Python 3.12 dengan bantuan pustaka komputasi numerik NumPy, Pandas, dan SciPy, tanpa menggunakan kerangka kerja rekomendasi siap pakai (\textit{black-box}).
+    \item \textbf{Batasan Pustaka}: Seluruh algoritma perekomendasi, perhitungan kesamaan, optimasi SGD, dan metrik evaluasi diimplementasikan murni dari awal menggunakan bahasa pemrograman Python 3.14 dengan bantuan pustaka komputasi numerik NumPy, Pandas, dan SciPy, tanpa menggunakan kerangka kerja rekomendasi siap pakai (\textit{black-box}).
     \item \textbf{Metrik Evaluasi}: Evaluasi kuantitatif mencakup metrik kesalahan prediksi rating: MAE (\textit{Mean Absolute Error}), MSE (\textit{Mean Squared Error}), RMSE (\textit{Root Mean Squared Error}), NMSE (\textit{Normalized Mean Squared Error}), serta metrik kualitas perankingan NDCG@10 (\textit{Normalized Discounted Cumulative Gain} pada $k=10$).
-    \item \textbf{Lingkungan Eksekusi}: Pengujian dilakukan pada lingkungan perangkat keras prosesor tunggal (CPU) standar untuk memastikan keterbandingan waktu komputasi yang adil dan objektif.
+    \item \textbf{Lingkungan Eksekusi}: Pengujian dilakukan pada satu laptop dengan CPU (tanpa GPU), sehingga waktu komputasi ketiga metode diukur pada perangkat yang sama.
 \end{enumerate}
 
 \section{Sistematika Penulisan}
-Laporan tugas besar ini disusun secara sistematis dengan struktur sebagai berikut:
+Laporan tugas kelompok ini disusun secara sistematis dengan struktur sebagai berikut:
 \begin{itemize}
     \item \textbf{Bab I Pendahuluan}: Memaparkan latar belakang, perumusan masalah, tujuan, batasan ruang lingkup penelitian, serta sistematika penulisan.
     \item \textbf{Bab II Kajian Pustaka}: Menguraikan landasan teori mengenai sistem pemberi rekomendasi, karakteristik matriks interaksi, formulasi matematis UBCF, IBCF, Matrix Factorization, metrik evaluasi rating dan ranking, serta pengujian statistik.

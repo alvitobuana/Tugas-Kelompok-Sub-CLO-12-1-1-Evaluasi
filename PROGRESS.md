@@ -22,7 +22,8 @@ Data anggota kelompok: lihat [README.md](README.md).
 | Perbandingan akhir ketiga metode | Selesai (9 Nov 2026), `notebooks/05_perbandingan.ipynb` |
 | Repo GitHub + README | Push pertama 9 Nov 2026 (UBCF, IBCF, kode MF); repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi |
 | Share repo ke dosen | Repo dibiarkan public (keputusan 9 Nov 2026), jadi dosen bisa membuka link tanpa undangan |
-| Laporan PDF | Belum |
+| Laporan PDF | Selesai, `laporan/main.pdf` (LaTeX); angka dicocokkan ulang dengan notebook dan `results/` pada 16 Nov 2026 |
+| Konsolidasi notebook | Notebook 01–05 digabung menjadi `notebooks/Evaluasi_RecSys_CF_MF.ipynb`; rujukan ke notebook 01–05 dan nama grafik lama di bawah adalah catatan historis |
 
 ---
 
