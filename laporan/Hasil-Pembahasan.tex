@@ -135,7 +135,101 @@ Standar Deviasi (SD) & $\pm$0,0086 & $\pm$0,0207 & $\pm$0,0109 & $\pm$0,0052 & $
 Gambar \ref{fig:ibcf_k} membandingkan empat varian pada fold 1 untuk $k$ = 10, 20, 30, 50, dan 100: \textit{Cosine} biasa dan \textit{Adjusted Cosine}, masing-masing dengan dan tanpa \textit{significance weighting}. \textit{Adjusted Cosine} lebih baik daripada \textit{Cosine} biasa pada semua nilai $k$. Pada $k=30$, RMSE turun dari 1,0508 menjadi 0,9966 (selisih 0,054) dan MAE turun dari 0,8283 menjadi 0,7851 (selisih 0,043). Penambahan \textit{significance weighting} pada \textit{Adjusted Cosine} menurunkan RMSE lagi menjadi 0,9644. Sebaliknya, pada \textit{Cosine} biasa \textit{significance weighting} justru menaikkan RMSE menjadi 1,1003. Dugaan kami, nilai \textit{Cosine} biasa hampir sama untuk semua pasangan film, sehingga setelah dikalikan bobot jumlah pengguna bersama, urutan tetangga lebih ditentukan oleh popularitas film daripada kemiripannya.
 
 \section{Analisis Kinerja dan Konvergensi Matrix Factorization}
-Model \textit{Matrix Factorization} (MF) dilatih menggunakan algoritma SGD dengan konfigurasi $K=100$ faktor laten, laju pembelajaran $\alpha=0,01$, dan penalti regularisasi $L_2$ $\beta=0,2$ selama 35 epoch. Hasil evaluasi per \textit{fold} disajikan pada Tabel \ref{tab:hasil_mf}.
+Subbab ini membahas \textit{Matrix Factorization} (MF) secara berurutan, mulai dari konsep dasar, langkah implementasi beserta kode, hasil evaluasi 5-\textit{fold}, hingga kendala yang dihadapi dan penyelesaiannya.
+
+\subsection{Konsep dan Ide Dasar}
+Pada \textit{User-Based} dan \textit{Item-Based Collaborative Filtering}, prediksi dihitung langsung dari matriks rating dengan mencari pengguna atau film yang mirip. Matrix Factorization (MF) memakai pendekatan yang berbeda, yaitu pendekatan berbasis model (\textit{model-based}). Alih-alih mencari tetangga setiap kali ada prediksi, MF mempelajari sebuah model ringkas dari seluruh rating yang tersedia, lalu memakai model tersebut untuk menebak rating yang belum ada \citep{koren2009matrix}. Pada penelitian ini MF diimplementasikan mengikuti materi perkuliahan \citep{baizal2024recsys}, yaitu bentuk dasar tanpa komponen bias.
+
+Ide dasarnya adalah bahwa selera seorang pengguna dan karakter sebuah film dapat dirangkum oleh sejumlah kecil angka tersembunyi yang disebut faktor laten (\textit{latent factors}). Sebagai gambaran, satu faktor dapat dibayangkan mewakili seberapa besar sebuah film bernuansa aksi, dan faktor lain mewakili nuansa drama. Pengguna yang menyukai aksi akan memiliki angka besar pada faktor aksi, dan film aksi juga memiliki angka besar pada faktor yang sama, sehingga keduanya cocok. Faktor-faktor ini tidak diberi nama oleh peneliti, tetapi ditemukan sendiri oleh algoritma dari pola rating. Secara matematis, matriks rating $R$ berukuran $943 \times 1.682$ didekati oleh hasil kali dua matriks yang jauh lebih kecil, yaitu $R \approx P Q^T$. Matriks $P$ berukuran $943 \times K$ menyimpan vektor faktor setiap pengguna, matriks $Q$ berukuran $1.682 \times K$ menyimpan vektor faktor setiap film, dan prediksi rating pengguna $u$ untuk film $i$ adalah hasil kali titik kedua vektor tersebut, seperti pada Persamaan \ref{eq:mf_pred}.
+
+Dengan $K = 100$, jumlah parameter yang dipelajari adalah $(943 + 1.682) \times 100 = 262.500$ angka. Jumlah ini jauh lebih kecil daripada $1.586.126$ sel matriks penuh, tetapi masih lebih banyak daripada 80.000 rating latih pada setiap \textit{fold}. Kondisi ini membuat model mudah \textit{overfitting}, sehingga regularisasi menjadi bagian yang sangat penting, seperti dibahas pada Subbab \ref{sec:mf_kendala}.
+
+Parameter $P$ dan $Q$ dipelajari dengan meminimalkan fungsi kerugian kuadrat ter-regularisasi pada Persamaan \ref{eq:mf_loss}. Untuk setiap rating yang diketahui, galat prediksi dihitung dengan Persamaan \ref{eq:mf_error}, kemudian vektor pengguna dan vektor film digeser sedikit ke arah yang memperkecil galat tersebut sesuai Persamaan \ref{eq:sgd_pu} dan \ref{eq:sgd_qi}. Jika prediksi terlalu rendah ($e_{u,i} > 0$), kedua vektor digeser agar hasil kali titiknya membesar, dan sebaliknya jika prediksi terlalu tinggi. Besar pergeseran diatur oleh laju pembelajaran $\alpha$, sedangkan suku $\beta$ menarik nilai vektor kembali mendekati nol agar tidak membesar berlebihan. Metode ini disebut \textit{stochastic} karena pembaruan dilakukan satu rating demi satu rating dengan urutan yang diacak pada setiap \textit{epoch}, bukan sekaligus untuk seluruh data. Setelah pelatihan selesai, prediksi dipotong ke rentang sah $[1, 5]$.
+
+\subsection{Langkah-Langkah Implementasi}
+Seluruh rumus MF ditulis sendiri (\textit{from scratch}) pada kelas \texttt{MatrixFactorization} di berkas \texttt{src/mf.py} tanpa pustaka rekomendasi siap pakai, kemudian dipanggil dari notebook pada bagian 7. Penulisan sendiri dipilih agar setiap langkah dapat dijelaskan dan diuji dengan contoh pada slide perkuliahan. Langkah-langkahnya diuraikan berikut ini.
+
+\subsubsection{Menyusun Matriks Rating}
+Langkah pertama adalah mengubah data rating pada setiap \textit{fold} (berkas \texttt{u1.base} sampai \texttt{u5.base}) menjadi matriks $R$ berukuran pengguna $\times$ film. Fungsi \texttt{to\_matrix} pada Gambar \ref{fig:mf_kode_matriks} mengisi sel yang tidak memiliki rating dengan \texttt{NaN}, bukan dengan 0, karena 0 bukan rating yang valid. Mengisi 0 akan membuat model menganggap pengguna memberi rating terendah pada film yang sebenarnya belum pernah ia tonton. Indeks pengguna dan film dikurangi 1 karena nomor identitas pada MovieLens dimulai dari 1, sedangkan indeks \textit{array} dimulai dari 0. Dataset yang dipakai adalah MovieLens 100K \citep{harper2015movielens}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{fig_mf_kode_matriks.png}
+\caption{Kode pembentukan matriks rating $R$ dengan sel kosong bernilai \texttt{NaN}}
+\label{fig:mf_kode_matriks}
+\end{figure}
+
+\subsubsection{Inisialisasi Matriks Faktor Laten}
+Matriks $P$ dan $Q$ diisi dengan bilangan acak seragam dari 0 sampai $s$ oleh fungsi \texttt{\_init\_factors} pada Gambar \ref{fig:mf_kode_init}. Nilai $s$ dipilih agar rata-rata prediksi awal kira-kira sama dengan rata-rata rating $\mu$. Rata-rata setiap elemen adalah $s/2$, sehingga rata-rata hasil kali titik dua vektor berdimensi $K$ adalah $K (s/2)^2$. Menyamakannya dengan $\mu$ memberikan
+\begin{equation}
+\label{eq:mf_init_s}
+s = 2\sqrt{\frac{\mu}{K}}
+\end{equation}
+Untuk $K = 100$ dan $\mu \approx 3{,}53$ diperoleh $s \approx 0{,}38$. Kode pada slide memakai bilangan acak 0 sampai 1, tetapi untuk $K = 100$ cara itu menghasilkan prediksi awal sekitar $100 \times 0{,}25 = 25$, jauh di atas rating maksimum 5. Contoh matriks $5 \times 4$ pada slide tetap memakai rentang 0 sampai 1 seperti aslinya (parameter \texttt{init="slide"}). Biji acak (\textit{seed}) ditetapkan agar hasil dapat diulang.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{fig_mf_kode_inisialisasi.png}
+\caption{Kode inisialisasi matriks faktor laten $P$ dan $Q$}
+\label{fig:mf_kode_init}
+\end{figure}
+
+\subsubsection{Pelatihan dengan Stochastic Gradient Descent}
+Inti metode ada pada fungsi \texttt{fit} yang ditampilkan pada Gambar \ref{fig:mf_kode_sgd}. Fungsi ini lebih dulu mencatat posisi seluruh rating yang diketahui (\texttt{np.nonzero(\textasciitilde np.isnan(R))}), menghitung rata-rata rating setiap pengguna (\texttt{user\_mean}), dan menandai film yang memiliki rating pada data latih (\texttt{item\_seen}). Kedua catatan terakhir dipakai pada tahap prediksi. Setelah inisialisasi, pelatihan berjalan sebanyak \texttt{epochs} putaran. Pada setiap putaran, urutan rating diacak dengan \texttt{rng.permutation}, lalu untuk setiap rating dilakukan tiga hal: menyalin vektor lama $p$ dan $q$, menghitung galat $e = r - p \cdot q$, dan memperbarui baris \texttt{P[i]} dan \texttt{Q[j]} dengan rumus SGD.
+
+Vektor lama disalin terlebih dahulu agar $p$ dan $q$ diperbarui secara serentak dari nilai yang sama. Hal ini sesuai dengan turunan rumus pada slide, yaitu kedua gradien dihitung pada titik yang sama. Kode slide memperbarui $p$ lebih dulu lalu memakai $p$ yang sudah baru untuk memperbarui $q$, dan perbedaan kecil ini dicatat sebagai keputusan implementasi pada \texttt{PROGRESS.md}. Pada akhir setiap \textit{epoch}, RMSE data latih dicatat, dan jika data validasi diberikan, RMSE validasi juga dicatat. Catatan ini (\texttt{history}) dipakai untuk menggambar kurva belajar dan memilih jumlah \textit{epoch}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_mf_kode_sgd.png}
+\caption{Kode pelatihan Matrix Factorization dengan SGD (fungsi \texttt{fit})}
+\label{fig:mf_kode_sgd}
+\end{figure}
+
+\subsubsection{Prediksi Rating}
+Prediksi untuk pasangan pengguna $u$ dan film $i$ dihitung oleh fungsi \texttt{predict} dan \texttt{predict\_df} pada Gambar \ref{fig:mf_kode_pred}. Hasil kali titik $p_u^T q_i$ dipotong ke rentang $[1, 5]$ dengan \texttt{np.clip}, karena hasil kali titik dapat melebihi batas rating yang sah. Pengecualian dibuat untuk film yang tidak memiliki satu pun rating pada data latih. Vektor $q_i$ film tersebut tidak pernah diperbarui sehingga masih berisi angka acak, maka prediksinya diganti dengan rata-rata rating pengguna $\bar{r}_u$. Nilai cadangan yang sama dipakai oleh UBCF dan IBCF sehingga perbandingan ketiga metode tetap adil.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{fig_mf_kode_prediksi.png}
+\caption{Kode prediksi rating dengan pemotongan nilai dan nilai cadangan}
+\label{fig:mf_kode_pred}
+\end{figure}
+
+\subsubsection{Verifikasi dengan Contoh pada Slide}
+Sebelum dipakai pada data MovieLens, implementasi diuji dengan contoh matriks $5 \times 4$ pada slide M04 menggunakan pengaturan yang sama dengan kode slide, yaitu $K = 2$, $\alpha = 0{,}0002$, $\beta = 0{,}02$, 5.000 iterasi, dan inisialisasi acak 0 sampai 1. Hasil pada Gambar \ref{fig:mf_kode_verif} menunjukkan bahwa seluruh rating yang diketahui berhasil direkonstruksi dengan selisih terbesar sekitar 0,11. RMSE data latih turun dari 2,440 pada \textit{epoch} pertama menjadi 0,040 pada \textit{epoch} terakhir. Pola sel yang kosong juga masuk akal: pengguna 3 sampai 5 yang menyukai film keempat mendapat prediksi tinggi untuk film ketiga, sedangkan pengguna 1 dan 2 yang menyukai film pertama mendapat prediksi lebih rendah. Angka prediksi pada sel kosong sedikit berbeda dari angka pada slide karena bilangan acak awalnya berbeda, tetapi polanya sama. Pengujian ini juga dijalankan secara otomatis pada \texttt{tests/test\_mf.py}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_mf_kode_verifikasi.png}
+\caption{Verifikasi implementasi MF dengan matriks contoh $5 \times 4$ pada slide M04}
+\label{fig:mf_kode_verif}
+\end{figure}
+
+\subsubsection{Penalaan Hyperparameter}
+Berbeda dengan UBCF dan IBCF yang parameternya ditetapkan dari materi perkuliahan sebelum hasil dilihat, parameter MF harus dipilih ulang karena nilai pada slide dirancang untuk matriks kecil. Pemilihan dilakukan tanpa menyentuh data uji. Data latih \textit{fold} 1 dibagi lagi menjadi 90\% data latih (72.106 rating) dan 10\% data validasi (7.894 rating), lalu setiap konfigurasi dilatih dan RMSE validasinya dicatat pada setiap \textit{epoch} (\texttt{scripts/mf\_tuning.py}, hasil pada \texttt{results/mf\_tuning.csv}). Proses ini memakan waktu sekitar 25 menit sehingga dijalankan terpisah dari notebook, dan notebook hanya membaca hasilnya seperti terlihat pada Gambar \ref{fig:mf_kode_tuning}.
+
+Pencarian dilakukan bertahap. Tahap pertama membandingkan laju pembelajaran $\alpha$ pada $K = 20$ dan $\beta = 0{,}02$, tahap kedua mencoba beberapa nilai $K$ dan $\beta$, dan tahap berikutnya memperluas rentang pencarian sampai nilai terbaik diapit oleh nilai yang lebih buruk di kedua sisinya (rincian pada Lampiran A). Konfigurasi terbaik adalah $K = 100$, $\alpha = 0{,}01$, $\beta = 0{,}2$, dan 35 \textit{epoch} dengan RMSE validasi 0,9140. Kurva belajar konfigurasi ini ditunjukkan pada Gambar \ref{fig:mf_kurva}. RMSE data latih terus turun dari 0,924 pada \textit{epoch} 1 menjadi 0,628 pada \textit{epoch} 35, sedangkan RMSE data validasi turun dari 0,971 menjadi 0,9140 pada \textit{epoch} 35 lalu naik tipis menjadi 0,920 pada \textit{epoch} 60. Titik terendah validasi inilah yang dipakai sebagai jumlah \textit{epoch} (\textit{early stopping}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_mf_kode_tuning.png}
+\caption{Kode pemilihan konfigurasi terbaik dan evaluasi 5-\textit{fold} Matrix Factorization}
+\label{fig:mf_kode_tuning}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{fig_mf_kurva_belajar.png}
+\caption{Kurva belajar RMSE pada data latih dan data validasi per epoch (fold 1)}
+\label{fig:mf_kurva}
+\end{figure}
+
+\subsubsection{Evaluasi 5-Fold}
+Konfigurasi terbaik tersebut dipakai tanpa perubahan pada kelima \textit{fold} bawaan MovieLens. Pada setiap \textit{fold}, model dilatih dengan 80.000 rating, memprediksi 20.000 rating uji, lalu lima metrik (MAE, MSE, RMSE, NMSE, dan NDCG@10) dihitung oleh modul \texttt{src/metrics.py}. Kelima \textit{fold} dijalankan secara paralel (\texttt{n\_jobs=5}) dan hasilnya disimpan pada \textit{cache} agar tidak perlu dilatih ulang.
+
+\subsection{Hasil Evaluasi 5-Fold}
+Hasil evaluasi Matrix Factorization pada kelima \textit{fold} disajikan pada Tabel \ref{tab:hasil_mf}.
 
 \begin{table}[htbp]
 \centering
@@ -159,23 +253,54 @@ Standar Deviasi (SD) & $\pm$0,0052 & $\pm$0,0097 & $\pm$0,0052 & $\pm$0,0024 & $
 \end{tabular}
 \end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.75\textwidth]{fig_mf_kurva_belajar.png}
-\caption{Kurva belajar RMSE pada data latih dan data validasi per epoch (fold 1)}
-\label{fig:mf_kurva}
-\end{figure}
+Rata-rata MAE sebesar 0,7357 berarti prediksi MF meleset sekitar 0,74 bintang dari rating sebenarnya, dengan RMSE 0,9249 dan NDCG@10 0,8578. Hasil antar-\textit{fold} cukup stabil: simpangan baku RMSE hanya 0,0052, dengan \textit{fold} 1 sebagai yang tersulit (RMSE 0,9334) dan \textit{fold} 3 sebagai yang termudah (RMSE 0,9197). Dibandingkan dengan \textit{baseline} terkuat, yaitu rata-rata rating film (MAE 0,8174, RMSE 1,0246, NDCG@10 0,8329), MF menurunkan MAE sebesar 10,00\%, menurunkan RMSE sebesar 9,73\%, dan menaikkan NDCG@10 sebesar 2,99\%. Perlu dicatat bahwa NDCG@10 \textit{baseline} sudah tinggi karena sekitar 58\% film pada data uji memang relevan (rating $\ge 4$), sehingga nilai NDCG lebih tepat dipakai untuk membandingkan metode daripada dianggap tinggi dengan sendirinya.
 
-Gambar \ref{fig:mf_kurva} menampilkan kurva belajar pada tahap penalaan. Pada tahap ini data latih fold 1 dibagi lagi menjadi 90\% data latih dan 10\% data validasi, sehingga data uji tidak dipakai untuk memilih parameter. RMSE data latih turun dari 0,924 pada epoch 1 menjadi 0,628 pada epoch 35. RMSE data validasi turun dari 0,971 pada epoch 1 dan mencapai nilai terendah 0,9140 pada epoch 35, lalu naik tipis menjadi 0,920 pada epoch 60. Karena itu jumlah epoch ditetapkan 35. Dengan regularisasi $\beta=0,2$, kurva validasi hampir mendatar setelah titik terendahnya, berbeda dengan $\beta=0,02$ yang naik tajam (Gambar \ref{fig:mf_lr}).
+Dibandingkan dengan UBCF (MAE 0,7342, RMSE 0,9434, NDCG@10 0,8474) dan IBCF (MAE 0,7383, RMSE 0,9459, NDCG@10 0,8375), MF paling unggul pada RMSE dan NDCG@10, sedangkan pada MAE ketiganya hampir sama. Uji t berpasangan pada lima \textit{fold} menunjukkan keunggulan MF pada RMSE signifikan terhadap UBCF ($p = 0{,}0002$) dan IBCF ($p = 0{,}0020$), demikian pula pada NDCG@10 ($p = 0{,}0102$ dan $p = 0{,}0008$), dengan MF menang pada kelima \textit{fold}. Pada MAE, selisih tidak signifikan ($p > 0{,}10$). Karena hanya ada lima pasang nilai, hasil uji ini dibaca sebagai petunjuk. Penjelasan mengapa MF unggul pada RMSE tetapi tidak pada MAE terdapat pada pembahasan perbandingan antar-metode: MF paling jarang membuat kesalahan besar (3,23\% prediksinya meleset 2 bintang atau lebih, dibanding 4,09\% pada UBCF dan 4,29\% pada IBCF), dan RMSE menghukum kesalahan besar lebih berat.
+
+Dari sisi waktu, MF membutuhkan pelatihan puluhan detik per \textit{fold}, jauh lebih lama daripada UBCF dan IBCF yang kurang dari satu detik. Sebagai imbalannya, prediksi untuk 20.000 pasangan rating hanya memerlukan sekitar 0,02 detik karena setiap prediksi berupa satu hasil kali titik, sedangkan UBCF dan IBCF perlu mencari tetangga pada setiap prediksi.
+
+\subsection{Kendala dan Penyelesaian pada Matrix Factorization}
+\label{sec:mf_kendala}
+Selama pengerjaan, beberapa kendala ditemui pada metode MF. Ringkasannya disajikan pada Tabel \ref{tab:mf_kendala}, dan uraian setiap kendala diberikan setelahnya.
+
+\begin{table}[htbp]
+\centering
+\caption{Ringkasan kendala pada Matrix Factorization dan penyelesaiannya}
+\label{tab:mf_kendala}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{No} & \textbf{Kendala} & \textbf{Penyelesaian} \\
+\midrule
+1 & Laju pembelajaran pada slide ($\alpha = 0{,}0002$) terlalu lambat untuk data sebesar MovieLens & Laju pembelajaran dipilih ulang menjadi $\alpha = 0{,}01$ \\
+2 & Model cepat mengalami \textit{overfitting} & Regularisasi diperkuat ($\beta = 0{,}2$) dan pelatihan dihentikan pada \textit{epoch} 35 \\
+3 & Parameter terbaik berada di ujung rentang yang dicoba & Rentang pencarian diperluas hingga nilai terbaik diapit nilai yang lebih buruk \\
+4 & Inisialisasi acak 0 sampai 1 menghasilkan prediksi awal yang terlalu besar untuk $K$ besar & Skala bilangan acak disesuaikan dengan Persamaan \ref{eq:mf_init_s} \\
+5 & Film pada data uji yang tidak ada pada data latih (\textit{cold start}) & Prediksi diganti rata-rata rating pengguna \\
+6 & Risiko memilih parameter dengan data uji (\textit{data leakage}) & Parameter dipilih dengan data validasi yang dipisah dari data latih \textit{fold} 1 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Laju pembelajaran pada slide terlalu lambat.} Kode pada slide memakai $\alpha = 0{,}0002$ dan 5.000 iterasi, yang cukup untuk matriks contoh berukuran $5 \times 4$ dengan 12 rating. Pada MovieLens, satu \textit{epoch} atas 80.000 rating memerlukan sekitar 0,8 detik, sehingga 5.000 \textit{epoch} akan memakan lebih dari satu jam untuk setiap \textit{fold}. Selain itu, dengan $\alpha = 0{,}0002$ RMSE validasi masih terus turun sampai \textit{epoch} 60 (0,9647), yang berarti pelatihan belum selesai. Rumus pembaruan dibiarkan sama dengan slide, tetapi nilai $\alpha$ dipilih ulang. Gambar \ref{fig:mf_lr} membandingkan $\alpha \in \{0{,}0002;\ 0{,}005;\ 0{,}01\}$ dan memperlihatkan bahwa $\alpha = 0{,}005$ dan $0{,}01$ mencapai nilai terbaiknya dalam beberapa \textit{epoch} saja. Dengan $\alpha = 0{,}01$ dan regularisasi yang tepat, model terbaik dicapai dalam 35 \textit{epoch} atau sekitar setengah menit.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.75\textwidth]{fig_mf_learning_rate.png}
-\caption{Pengaruh laju pembelajaran $\alpha$ terhadap RMSE validasi ($K=20$, $\beta=0,02$)}
+\caption{Pengaruh laju pembelajaran $\alpha$ terhadap RMSE validasi ($K=20$, $\beta=0{,}02$)}
 \label{fig:mf_lr}
 \end{figure}
 
-Gambar \ref{fig:mf_lr} membandingkan $\alpha \in \{0,0002;\ 0,005;\ 0,01\}$ pada $K=20$ dan $\beta=0,02$. Dengan $\alpha=0,0002$ (nilai pada slide), RMSE validasi masih terus turun sampai epoch 60 (0,965), sehingga pelatihan terlalu lambat untuk data sebesar ini. Dengan $\alpha=0,005$ dan $\alpha=0,01$, RMSE validasi mencapai nilai terendah pada epoch 6 (0,965) dan epoch 3 (0,973), lalu naik terus sampai 1,065 dan 1,098 pada epoch 60. Kenaikan ini menandakan \textit{overfitting} karena regularisasi $\beta=0,02$ terlalu lemah. Oleh sebab itu $\alpha=0,01$ dipakai bersama nilai $\beta$ yang lebih besar, yang dipilih pada tahap penalaan berikutnya (Lampiran A).
+\textbf{Model cepat mengalami overfitting.} Pada Gambar \ref{fig:mf_lr}, dengan $\beta = 0{,}02$ (nilai pada slide) dan $\alpha = 0{,}01$, RMSE validasi mencapai titik terbaik pada \textit{epoch} 3 (0,9732) lalu naik terus sampai 1,0976 pada \textit{epoch} 60, sementara RMSE data latih terus turun. Ini merupakan tanda \textit{overfitting}: angka pada matriks $P$ dan $Q$ membesar demi menghafal data latih sehingga model semakin buruk pada rating yang belum pernah dilihat. Regularisasi $\beta = 0{,}02$ terlalu lemah untuk menahannya, apalagi jumlah parameter model lebih banyak daripada jumlah rating latih. Penyelesaiannya ada dua. Pertama, regularisasi diperkuat menjadi $\beta = 0{,}2$ berdasarkan data validasi. Kedua, pelatihan dihentikan pada \textit{epoch} dengan RMSE validasi terkecil (\textit{early stopping}). Hasilnya, RMSE validasi terbaik membaik dari 0,9732 menjadi 0,9140 dan kurva validasi tidak lagi naik tajam (Gambar \ref{fig:mf_kurva}). Temuan menarik dari tahap ini adalah bahwa $K$ yang besar baru bermanfaat jika regularisasinya cukup kuat. Pada $\beta = 0{,}02$, $K = 50$ (RMSE validasi 0,9663) justru lebih buruk daripada $K = 5$ (0,9621).
+
+\textbf{Parameter terbaik berada di ujung rentang pencarian.} Pada pencarian awal ($K$ dari 5 sampai 50 dan $\beta$ dari 0,02 sampai 0,1), hasil terbaik adalah $K = 50$ dan $\beta = 0{,}1$, yaitu nilai terbesar pada kedua rentang. Kondisi ini berarti nilai yang lebih baik mungkin berada di luar rentang yang dicoba. Rentang pencarian karena itu diperluas dua kali, hingga $\beta$ sampai 0,5, $K$ sampai 200, dan 100 \textit{epoch}. Pencarian dihentikan setelah nilai terbaik ($K = 100$, $\beta = 0{,}2$) diapit oleh nilai yang lebih buruk di kedua sisinya, misalnya $\beta = 0{,}1$ menghasilkan RMSE validasi 0,9274 dan $\beta = 0{,}3$ menghasilkan 0,9257, sedangkan $K = 50$ dan $K = 200$ menghasilkan 0,9185 dan 0,9157 pada $\beta = 0{,}2$ (Lampiran A).
+
+\textbf{Inisialisasi acak tidak cocok untuk $K$ besar.} Kode slide mengisi $P$ dan $Q$ dengan bilangan acak 0 sampai 1. Rata-rata hasil kali dua bilangan seperti itu adalah 0,25 sehingga prediksi awal sekitar $K \times 0{,}25$, yaitu sekitar 25 untuk $K = 100$ dan jauh di atas rating maksimum 5. Prediksi awal yang sangat jauh dari rating membuat pembaruan awal terlalu besar dan tidak stabil. Skala bilangan acak karena itu disesuaikan dengan Persamaan \ref{eq:mf_init_s} sehingga prediksi awal kira-kira sama dengan rata-rata rating.
+
+\textbf{Film yang tidak ada pada data latih (\textit{cold start}).} Pada setiap \textit{fold} terdapat 22 sampai 34 film pada data uji yang sama sekali tidak memiliki rating pada data latih. Pada MF, vektor film tersebut tidak pernah diperbarui sehingga masih berisi angka acak, dan prediksi dari hasil kali titik tidak bermakna. Untuk kasus ini prediksi diganti dengan rata-rata rating pengguna, sama seperti nilai cadangan pada UBCF dan IBCF, sehingga seluruh rating uji tetap memperoleh prediksi. Selain itu, karena hasil kali titik dapat keluar dari rentang 1 sampai 5, seluruh prediksi dipotong ke rentang tersebut.
+
+\textbf{Risiko memilih parameter dengan data uji.} Jika $K$, $\beta$, atau jumlah \textit{epoch} dipilih berdasarkan nilai terbaik pada data uji, hasil evaluasi akan tampak lebih baik daripada kenyataan karena data uji sudah ``diintip'' (\textit{data leakage}). Untuk menghindarinya, seluruh pemilihan parameter MF dilakukan dengan data validasi yang dipisahkan dari data latih \textit{fold} 1, sedangkan data uji baru dipakai pada evaluasi akhir. Konfigurasi hasil pemilihan tersebut kemudian dipakai tanpa diubah pada kelima \textit{fold}.
 
 \section{Perbandingan Komprehensif Antar-Metode}
 Rekapitulasi performa seluruh model \textit{baseline} dan metode rekomendasi utama dirangkum pada Tabel \ref{tab:perbandingan_komprehensif}.
