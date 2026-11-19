@@ -22,7 +22,7 @@ Data anggota kelompok: lihat [README.md](README.md).
 | Perbandingan akhir ketiga metode | Selesai (9 Nov 2026), `notebooks/05_perbandingan.ipynb` |
 | Repo GitHub + README | Push pertama 9 Nov 2026 (UBCF, IBCF, kode MF); repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi |
 | Share repo ke dosen | Repo dibiarkan public (keputusan 9 Nov 2026), jadi dosen bisa membuka link tanpa undangan |
-| Laporan PDF | Selesai, `laporan/main.pdf` (LaTeX); angka dicocokkan ulang dengan notebook dan `results/` pada 16 Nov 2026 |
+| Laporan PDF | Selesai, `laporan/main.pdf` (LaTeX, 47 halaman); angka dicocokkan ulang dengan notebook dan `results/` pada 16 Nov 2026; link repo dan potongan kode (subbab 3.6) ditambahkan 19 Nov 2026 |
 | Konsolidasi notebook | Notebook 01–05 digabung menjadi `notebooks/Evaluasi_RecSys_CF_MF.ipynb`; rujukan ke notebook 01–05 dan nama grafik lama di bawah adalah catatan historis |
 
 ---
@@ -569,11 +569,43 @@ README bersama bagian Referensi.
 
 ---
 
+## 2026-11-19 — Melengkapi syarat laporan: link source code dan potongan kode
+
+**Temuan saat memeriksa `laporan/main.pdf` (41 halaman, versi 16 Nov):** soal tugas meminta "tuliskan juga
+link sourcecode" (poin 3) dan "screenshot source code yang anda jelaskan" (poin 4). Keduanya belum ada di
+PDF: tidak ada link GitHub, dan kesebelas gambar di laporan semuanya grafik hasil, bukan kode.
+
+**Yang ditambahkan:**
+- Link repository di sampul (`laporan/Cover.tex`) dan di awal subbab baru.
+- Subbab baru **3.6 Implementasi Program dan Kode Sumber** di `laporan/Metodologi.tex`, berisi enam gambar
+  potongan kode beserta penjelasan per baris:
+
+| Gambar | Berkas dan baris | Isi |
+|---|---|---|
+| `figures/fig_kode_ubcf_pearson.png` | `src/ubcf.py` 14–48 | Korelasi Pearson antar-pengguna |
+| `figures/fig_kode_ubcf_prediksi.png` | `src/ubcf.py` 81–99 | Pemilihan tetangga dan prediksi UBCF |
+| `figures/fig_kode_ibcf_similarity.png` | `src/ibcf.py` 14–41 | Cosine dan adjusted cosine antar-film |
+| `figures/fig_kode_ibcf_prediksi.png` | `src/ibcf.py` 75–93 | Pemilihan film tetangga dan prediksi IBCF |
+| `figures/fig_kode_mf_sgd.png` | `src/mf.py` 55–86 | Loop pelatihan SGD Matrix Factorization |
+| `figures/fig_kode_metrik_nmse_ndcg.png` | `src/metrics.py` 28–65 | NMSE dan NDCG@l |
+
+- Kalimat Bab III di "Sistematika Penulisan" (`laporan/Pendahuluan.tex`) diperbarui.
+
+**Catatan teknis:**
+- Gambar kode dibuat langsung dari berkas sumber (Pygments, font Consolas) dengan nomor baris asli. Jika
+  kode di `src/` diubah, nomor baris di gambar dan teks subbab 3.6 harus diperbarui juga.
+- Setiap nomor baris yang disebut di teks dicocokkan otomatis dengan isi baris di berkas kode.
+- PDF dikompilasi dengan Tectonic 0.17 (mesin XeTeX, conda env `texbuild`). Font tetap Latin Modern seperti
+  versi sebelumnya. Hasil: 47 halaman, tanpa referensi atau sitasi yang rusak, dan kedua link GitHub bisa
+  diklik. Satu peringatan *overfull* tersisa berasal dari judul subbab 4.7 yang sudah ada sebelumnya.
+- `.gitignore` kembali mengecualikan `info_kelompok.md` (aturannya sempat terhapus saat `.gitignore` ditulis
+  ulang).
+
+---
+
 ## Langkah berikutnya
 
-1. Membagi penulisan bab laporan ke anggota kelompok (opsional: folder `laporan/` berisi template per bab,
-   dikerjakan langsung di GitHub agar setiap anggota tercatat sebagai kontributor).
-2. Laporan PDF, dengan bab khusus "Kendala dan Penyelesaian" dari MASALAH_DAN_PENYELESAIAN.md, dan daftar
-   pustaka yang memuat sitasi wajib MovieLens.
+1. Semua anggota membaca subbab 3.6 sesuai bagiannya sebagai bekal jika diminta presentasi.
+2. Mengumpulkan `laporan/main.pdf` sebelum 20 November 2026 pukul 23.59.
 3. (Belum dikerjakan) Menguji kode dengan pandas 2.x, versi yang biasa terpasang di Anaconda. Saat ini kode
    baru diuji dengan pandas 3.0.5 dan numpy 2.2.

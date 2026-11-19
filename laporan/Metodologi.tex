@@ -137,3 +137,82 @@ Untuk menjamin integritas saintifik sebelum menjalankan komputasi 5-\textit{fold
     \item \textbf{Automated Test Suite}: Terdapat 19 \textit{unit test} pada direktori \texttt{tests/} yang menguji metrik (5), UBCF (3), IBCF (4), MF (3), dan \textit{baseline} (4) terhadap contoh hitungan pada slide, misalnya korelasi Pearson dan prediksi Alice (4,87), \textit{adjusted cosine} (0,80), serta rekonstruksi matriks contoh $5 \times 4$.
     \item \textbf{Arsitektur Caching}: Hasil komputasi matriks kesamaan dan pelatihan model disimpan secara deterministik pada direktori \texttt{results/cache/} guna mempercepat proses eksekusi ulang (\textit{re-run}) tanpa mengubah determinisme numerik.
 \end{enumerate}
+
+\section{Implementasi Program dan Kode Sumber}
+Seluruh kode sumber, \textit{notebook}, dan hasil eksperimen tersedia pada repositori GitHub berikut:
+\begin{center}
+{\footnotesize\url{https://github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi}}
+\end{center}
+Rumus setiap metode ditulis pada modul Python di direktori \texttt{src/}, yaitu \texttt{ubcf.py}, \texttt{ibcf.py}, \texttt{mf.py}, dan \texttt{metrics.py}, sedangkan \textit{notebook} hanya memanggil modul tersebut. Dengan susunan ini, rumus yang sama dipakai oleh \textit{notebook} dan oleh pengujian otomatis pada direktori \texttt{tests/}. Potongan kode berikut diambil langsung dari modul tersebut, dan nomor baris pada setiap gambar sesuai dengan nomor baris pada berkas aslinya.
+
+\subsection{Kemiripan Antar-Pengguna pada User-Based CF}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_pearson.png}
+\caption{Potongan kode perhitungan korelasi Pearson antar-pengguna (\texttt{src/ubcf.py})}
+\label{fig:kode_ubcf_pearson}
+\end{figure}
+
+Gambar \ref{fig:kode_ubcf_pearson} menunjukkan fungsi \texttt{pearson\_similarity} yang menghitung korelasi Pearson untuk semua pasangan pengguna sekaligus. Baris 27 membentuk matriks penanda $M$ yang bernilai 1 jika pengguna memberi rating pada suatu film dan 0 jika tidak, sedangkan baris 28 mengisi rating yang kosong dengan 0 agar tidak ikut terjumlahkan. Dengan perkalian matriks pada baris 31--36, diperoleh jumlah film yang dirating bersama ($n$), jumlah rating, jumlah kuadrat rating, dan jumlah hasil kali rating untuk setiap pasangan pengguna, tetapi hanya pada film yang dirating oleh keduanya. Baris 39--42 kemudian menghitung kovarians dan variansi lalu membaginya sehingga diperoleh korelasi Pearson. Pasangan yang hanya memiliki kurang dari dua film yang sama diberi nilai 0 (baris 46), karena korelasi tidak dapat dihitung dari satu titik data, dan seorang pengguna tidak dihitung sebagai tetangga bagi dirinya sendiri (baris 47). Cara perkalian matriks ini memberikan hasil yang sama dengan rumus Pearson pada slide, yang dibuktikan oleh pengujian dengan contoh Alice (0,85; 0,70; 0,00; $-$0,79).
+
+\subsection{Prediksi Rating pada User-Based CF}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_prediksi.png}
+\caption[Potongan kode prediksi rating User-Based CF]{Potongan kode pemilihan tetangga dan prediksi rating User-Based CF (\texttt{src/ubcf.py})}
+\label{fig:kode_ubcf_prediksi}
+\end{figure}
+
+Gambar \ref{fig:kode_ubcf_prediksi} memperlihatkan dua tahap prediksi. Fungsi \texttt{neighbors} mengambil semua pengguna yang sudah merating film $i$ (baris 83), membuang pengguna dengan kemiripan tidak positif (baris 85--86), lalu memilih $k$ pengguna dengan kemiripan tertinggi (baris 87--89). Fungsi \texttt{predict} kemudian menghitung prediksi pada baris 98 sesuai rumus
+\begin{equation*}
+\hat{r}_{a,i} = \bar{r}_a + \frac{\sum_{b \in N} sim(a,b)\,(r_{b,i} - \bar{r}_b)}{\sum_{b \in N} sim(a,b)},
+\end{equation*}
+yaitu rata-rata rating pengguna aktif ditambah rata-rata tertimbang selisih rating para tetangga terhadap kebiasaan mereka masing-masing. Nilai \texttt{self.dev} berisi selisih $r_{b,i} - \bar{r}_b$ yang sudah dihitung sebelumnya. Jika tidak ada tetangga yang memenuhi syarat, prediksi memakai rata-rata rating pengguna (baris 95--96), dan hasil akhir dibatasi ke rentang 1--5 (baris 99).
+
+\subsection{Kemiripan Antar-Film pada Item-Based CF}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ibcf_similarity.png}
+\caption{Potongan kode perhitungan cosine dan adjusted cosine antar-film (\texttt{src/ibcf.py})}
+\label{fig:kode_ibcf_similarity}
+\end{figure}
+
+Gambar \ref{fig:kode_ibcf_similarity} menunjukkan fungsi \texttt{item\_similarity}. Perbedaan antara cosine biasa dan \textit{adjusted cosine} hanya terletak pada baris 29: jika \texttt{adjusted} bernilai benar, setiap rating dikurangi rata-rata rating pengguna yang memberikannya, sehingga perbedaan kebiasaan pengguna dalam memberi nilai dihilangkan. Matriks kemudian dibalik menjadi film $\times$ pengguna (baris 31). Baris 34 menghitung pembilang $\sum_u x_{u,a}\,x_{u,b}$, yang otomatis hanya mencakup pengguna yang merating kedua film karena sel kosong bernilai 0, sedangkan baris 35--36 menghitung jumlah kuadrat untuk penyebut, juga hanya dari pengguna yang merating kedua film. Baris 38 membagi keduanya sehingga diperoleh nilai kemiripan, dan pasangan film yang tidak memiliki pengguna bersama diberi nilai 0 (baris 39).
+
+\subsection{Prediksi Rating pada Item-Based CF}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ibcf_prediksi.png}
+\caption[Potongan kode prediksi rating Item-Based CF]{Potongan kode pemilihan film tetangga dan prediksi rating Item-Based CF (\texttt{src/ibcf.py})}
+\label{fig:kode_ibcf_prediksi}
+\end{figure}
+
+Pada Gambar \ref{fig:kode_ibcf_prediksi}, fungsi \texttt{neighbors} mengambil film-film yang sudah dirating oleh pengguna $u$ (baris 77), mengambil kemiripan film-film tersebut dengan film target $p$ (baris 78), menyaring yang bernilai di atas ambang batas (baris 79--80), lalu memilih $k$ film yang paling mirip (baris 81--83). Prediksi dihitung pada baris 92 sebagai rata-rata tertimbang rating pengguna pada film-film tetangga tersebut,
+\begin{equation*}
+\hat{r}_{u,p} = \frac{\sum_{i \in N} sim(i,p)\, r_{u,i}}{\sum_{i \in N} sim(i,p)},
+\end{equation*}
+sesuai rumus pada slide Item-Based CF. Jika tidak ada film mirip yang pernah dirating pengguna, misalnya film yang tidak muncul pada data latih, prediksi memakai rata-rata rating pengguna (baris 88--91).
+
+\subsection{Pelatihan Matrix Factorization dengan SGD}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_mf_sgd.png}
+\caption[Potongan kode pelatihan Matrix Factorization dengan SGD]{Potongan kode pelatihan Matrix Factorization dengan Stochastic Gradient Descent (\texttt{src/mf.py})}
+\label{fig:kode_mf_sgd}
+\end{figure}
+
+Gambar \ref{fig:kode_mf_sgd} menunjukkan fungsi \texttt{fit} yang melatih matriks $P$ (pengguna $\times$ $K$) dan $Q$ (film $\times$ $K$). Baris 62--63 mengambil seluruh pasangan pengguna--film yang memiliki rating, dan baris 67 mengisi $P$ serta $Q$ dengan nilai acak awal. Setiap epoch, urutan rating diacak (baris 73), yang menjadi sifat \textit{stochastic} pada SGD. Untuk setiap rating, baris 76 menghitung galat $e_{ij} = r_{ij} - p_i \cdot q_j$, lalu baris 77--78 memperbarui vektor pengguna dan vektor film dengan aturan yang sama seperti pada slide Matrix Factorization:
+\begin{equation*}
+p_i \leftarrow p_i + \alpha\,(2\,e_{ij}\,q_j - \beta\,p_i), \qquad q_j \leftarrow q_j + \alpha\,(2\,e_{ij}\,p_i - \beta\,q_j).
+\end{equation*}
+Nilai lama $p_i$ dan $q_j$ disalin terlebih dahulu pada baris 75 sehingga kedua vektor diperbarui secara serentak dari titik yang sama. Di akhir setiap epoch, RMSE data latih dan data validasi dicatat (baris 79--83). Catatan inilah yang dipakai untuk menggambar kurva belajar dan memilih jumlah epoch tanpa menyentuh data uji.
+
+\subsection{Metrik NMSE dan NDCG}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_metrik_nmse_ndcg.png}
+\caption[Potongan kode perhitungan NMSE dan NDCG]{Potongan kode perhitungan NMSE dan NDCG@$l$ (\texttt{src/metrics.py})}
+\label{fig:kode_metrik}
+\end{figure}
+
+Gambar \ref{fig:kode_metrik} memuat dua metrik yang rumusnya mengikuti versi pada slide. NMSE dihitung pada baris 30 sebagai MSE dibagi rentang rating $(r_{max} - r_{min})$. Fungsi \texttt{dcg} (baris 33--37) menjumlahkan $rel_i / \log_2(i+1)$ untuk setiap posisi $i$. Fungsi \texttt{ndcg\_list} membentuk urutan ideal dengan mengurutkan relevansi dari besar ke kecil (baris 43), lalu membagi DCG dengan IDCG (baris 47). Pada fungsi \texttt{ndcg\_at\_l}, film milik setiap pengguna di data uji diurutkan berdasarkan rating prediksi (baris 61), film dianggap relevan jika rating aslinya minimal 4 (baris 62), dan pengguna tanpa film relevan dilewati karena IDCG-nya bernilai 0 sehingga NDCG tidak terdefinisi (baris 47 dan 65).

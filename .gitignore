@@ -7,6 +7,9 @@ desktop.ini
 # dataset tidak diunggah; unduh otomatis dari GroupLens
 data/
 
+# catatan lokal anggota (tidak diunggah)
+info_kelompok.md
+
 # cache komputasi
 results/cache/
 
