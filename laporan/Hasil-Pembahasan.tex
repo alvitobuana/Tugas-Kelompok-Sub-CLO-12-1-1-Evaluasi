@@ -67,7 +67,78 @@ Hasil eksperimen membuktikan bahwa:
 \end{itemize}
 
 \section{Analisis Kinerja dan Sensitivitas User-Based CF}
-Hasil pengujian algoritma \textit{User-Based Collaborative Filtering} (UBCF) dengan parameter default $k=30$ dan $\gamma=50$ pada masing-masing \textit{fold} disajikan pada Tabel \ref{tab:hasil_ubcf}.
+\label{sec:ubcf}
+Subbab ini membahas \textit{User-Based Collaborative Filtering} (UBCF) secara berurutan, mulai dari konsep dasar, langkah implementasi beserta kode, hasil evaluasi 5-\textit{fold}, analisis sensitivitas, hingga kendala yang dihadapi dan penyelesaiannya.
+
+\subsection{Konsep dan Ide Dasar}
+UBCF merupakan salah satu metode \textit{collaborative filtering} yang menghasilkan prediksi rating dan rekomendasi item berdasarkan kemiripan preferensi antar-pengguna. Metode ini berasumsi bahwa pengguna yang memiliki pola penilaian serupa terhadap sejumlah item cenderung memiliki preferensi yang serupa pula terhadap item lainnya. Oleh karena itu, rating dari pengguna lain yang mirip dengan pengguna target dapat dimanfaatkan untuk memperkirakan rating pada item yang belum pernah dinilainya \citep{jannach2010recommender}.
+
+Pada eksperimen ini, UBCF diterapkan pada dataset MovieLens 100K dengan korelasi Pearson untuk mengukur kemiripan antar-pengguna. Selain itu, diterapkan \textit{significance weighting} dengan parameter $\gamma = 50$ untuk mengurangi pengaruh nilai kemiripan yang dihitung dari terlalu sedikit item, dan prediksi rating memanfaatkan deviasi rating dari $k = 30$ tetangga terdekat.
+
+\subsection{Langkah-Langkah Implementasi}
+Seluruh rumus UBCF ditulis sendiri pada kelas \texttt{UserBasedCF} dan fungsi \texttt{pearson\_similarity} di berkas \texttt{src/ubcf.py}, tanpa pustaka rekomendasi siap pakai. Langkah-langkahnya diuraikan berikut ini.
+
+\subsubsection{Perhitungan Kemiripan Antar-Pengguna}
+Tahap pertama adalah menghitung kemiripan antar-pengguna dengan korelasi Pearson. Perhitungan hanya memakai item yang dirating oleh kedua pengguna yang dibandingkan; rating yang tidak tersedia tidak ikut dihitung.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_pearson.png}
+\caption{Potongan kode perhitungan korelasi Pearson antar-pengguna (\texttt{src/ubcf.py})}
+\label{fig:kode_ubcf_pearson}
+\end{figure}
+
+Gambar \ref{fig:kode_ubcf_pearson} menunjukkan fungsi \texttt{pearson\_similarity} yang menghitung korelasi Pearson untuk semua pasangan pengguna sekaligus. Baris 27 membentuk matriks penanda $M$ yang bernilai 1 jika pengguna memberi rating pada suatu film dan 0 jika tidak, sedangkan baris 28 mengisi rating yang kosong dengan 0 agar tidak ikut terjumlahkan. Dengan perkalian matriks pada baris 31--36, diperoleh jumlah film yang dirating bersama ($n$), jumlah rating, jumlah kuadrat rating, dan jumlah hasil kali rating untuk setiap pasangan pengguna, tetapi hanya pada film yang dirating oleh keduanya. Baris 39--42 kemudian menghitung kovarians dan variansi lalu membaginya sehingga diperoleh korelasi Pearson. Pasangan yang memiliki kurang dari dua film yang sama diberi nilai 0 (baris 46), karena korelasi tidak dapat dihitung dari satu titik data, dan seorang pengguna tidak dihitung sebagai tetangga bagi dirinya sendiri (baris 47).
+
+Korelasi Pearson dipilih karena mempertimbangkan rata-rata rating masing-masing pengguna, sehingga kemiripan tidak hanya ditentukan oleh nilai rating secara langsung, tetapi juga oleh kecenderungan pengguna dalam memberikan penilaian. Nilai korelasi berada pada rentang $-1$ hingga 1. Nilai positif menunjukkan pola penilaian yang searah, nilai negatif menunjukkan pola yang berlawanan, dan nilai mendekati nol menunjukkan hubungan yang lemah.
+
+\subsubsection{Penerapan Significance Weighting}
+Nilai kemiripan Pearson selanjutnya disesuaikan dengan \textit{significance weighting}. Penyesuaian ini diperlukan karena korelasi yang dihitung dari sedikit item bersama dapat bernilai tinggi secara kebetulan, sehingga kurang dapat diandalkan untuk menentukan tetangga terdekat. Rumus yang digunakan adalah
+\begin{equation}
+\label{eq:sig_weight}
+sim'(a,b) = sim(a,b) \times \frac{\min(n_{ab}, \gamma)}{\gamma},
+\end{equation}
+dengan $sim(a,b)$ adalah korelasi Pearson antara pengguna $a$ dan $b$, $n_{ab}$ adalah jumlah film yang dinilai oleh kedua pengguna, dan $\gamma = 50$. Apabila dua pengguna hanya memiliki sedikit film yang dinilai bersama, nilai kemiripannya dikurangi secara linear, sedangkan pasangan dengan minimal 50 film bersama tidak mengalami pengurangan.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_fit.png}
+\caption{Potongan kode pelatihan UBCF dan penerapan \textit{significance weighting} (\texttt{src/ubcf.py})}
+\label{fig:kode_ubcf_fit}
+\end{figure}
+
+Gambar \ref{fig:kode_ubcf_fit} menunjukkan fungsi \texttt{fit}. Baris 71 menghitung rata-rata rating setiap pengguna dan baris 72 menyimpan deviasi $r_{b,i} - \bar{r}_b$ yang nanti dipakai saat prediksi. Baris 73 memanggil \texttt{pearson\_similarity}, lalu baris 74--76 menerapkan Persamaan \ref{eq:sig_weight} pada seluruh matriks kemiripan sekaligus. Baris 78 menyimpan daftar pengguna yang pernah merating setiap film agar pencarian tetangga pada tahap prediksi lebih cepat.
+
+\subsubsection{Pemilihan Tetangga dan Prediksi Rating}
+Setelah nilai kemiripan disesuaikan, sistem menentukan tetangga terdekat dan menghitung prediksi rating. Penggunaan sejumlah tetangga tertentu membatasi perhitungan pada pengguna yang relevan, sehingga prediksi tidak melibatkan seluruh pengguna dalam dataset.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_prediksi.png}
+\caption[Potongan kode prediksi rating User-Based CF]{Potongan kode pemilihan tetangga dan prediksi rating User-Based CF (\texttt{src/ubcf.py})}
+\label{fig:kode_ubcf_prediksi}
+\end{figure}
+
+Pada Gambar \ref{fig:kode_ubcf_prediksi}, fungsi \texttt{neighbors} mengambil semua pengguna yang sudah merating film $i$ (baris 83), membuang pengguna dengan kemiripan tidak positif (baris 85--86), lalu memilih $k$ pengguna dengan kemiripan tertinggi (baris 87--89). Fungsi \texttt{predict} kemudian menghitung prediksi pada baris 98 sesuai rumus
+\begin{equation*}
+\hat{r}_{a,i} = \bar{r}_a + \frac{\sum_{b \in N} sim(a,b)\,(r_{b,i} - \bar{r}_b)}{\sum_{b \in N} sim(a,b)}.
+\end{equation*}
+Pendekatan berbasis deviasi ini digunakan agar perbedaan kebiasaan memberi rating dapat diperhitungkan: pengguna yang cenderung memberi rating tinggi maupun rendah tidak dibandingkan berdasarkan rating mentahnya, tetapi berdasarkan seberapa jauh rating tersebut dari kebiasaannya sendiri. Jika tidak ada tetangga yang memenuhi syarat, prediksi memakai rata-rata rating pengguna (baris 95--96), dan hasil akhir dibatasi ke rentang 1--5 (baris 99). Nilai prediksi inilah yang dipakai dalam evaluasi maupun penyusunan daftar rekomendasi film.
+
+\subsubsection{Verifikasi dengan Contoh Alice}
+Implementasi UBCF diverifikasi dengan contoh kasus Alice pada materi perkuliahan \citep{baizal2024recsys}. Verifikasi dilakukan dengan membandingkan nilai korelasi Pearson hasil kode dengan nilai pada slide, serta membandingkan prediksi rating Alice terhadap item kelima.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\textwidth]{fig_ubcf_verifikasi_alice.png}
+\caption{Verifikasi korelasi Pearson dan prediksi rating Alice terhadap contoh pada slide}
+\label{fig:ubcf_alice}
+\end{figure}
+
+Berdasarkan Gambar \ref{fig:ubcf_alice}, nilai korelasi hasil kode sesuai dengan nilai pada slide, dengan perbedaan pembulatan pada User 2, yaitu 0,70 pada slide dan 0,71 pada kode (nilai tepatnya 0,7071). Prediksi rating Alice terhadap item kelima yang dihasilkan kode adalah 4,87, sama dengan hasil perhitungan pada slide.
+
+\subsection{Hasil Evaluasi 5-Fold}
+Evaluasi UBCF dilakukan dengan 5-\textit{fold cross validation} pada dataset MovieLens 100K, sehingga hasilnya tidak bergantung pada satu pembagian data saja. Hasil pada setiap \textit{fold} dengan $k=30$ dan $\gamma=50$ disajikan pada Tabel \ref{tab:hasil_ubcf}.
 
 \begin{table}[htbp]
 \centering
@@ -91,6 +162,11 @@ Standar Deviasi (SD) & $\pm$0,0047 & $\pm$0,0114 & $\pm$0,0060 & $\pm$0,0029 & $
 \end{tabular}
 \end{table}
 
+Rata-rata MAE sebesar 0,7342 berarti prediksi UBCF meleset sekitar 0,73 bintang dari rating sebenarnya, dengan RMSE 0,9434. Simpangan baku RMSE sebesar 0,0060 menunjukkan bahwa RMSE pada setiap \textit{fold} relatif dekat dengan rata-ratanya, sehingga kinerja UBCF konsisten pada pembagian data yang berbeda. Pada metrik peringkat, UBCF memperoleh rata-rata NDCG@10 sebesar 0,8474. Hasil ini menjadi dasar perbandingan dengan IBCF dan \textit{Matrix Factorization} pada Subbab \ref{sec:perbandingan}.
+
+\subsection{Analisis Sensitivitas Parameter $k$}
+Selain evaluasi 5-\textit{fold}, dilakukan analisis sensitivitas untuk mengamati pengaruh jumlah tetangga $k$ terhadap kinerja UBCF. Nilai $k$ yang diuji adalah 10, 20, 30, 50, dan 100 pada \textit{fold} 1, dengan membandingkan korelasi Pearson biasa dan korelasi Pearson dengan \textit{significance weighting} ($\gamma = 50$).
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.75\textwidth]{fig_ubcf_sensitivitas_k.png}
@@ -99,6 +175,16 @@ Standar Deviasi (SD) & $\pm$0,0047 & $\pm$0,0114 & $\pm$0,0060 & $\pm$0,0029 & $
 \end{figure}
 
 Gambar \ref{fig:ubcf_k} menunjukkan RMSE pada fold 1 untuk $k$ = 10, 20, 30, 50, dan 100, dengan dan tanpa \textit{significance weighting}. Dengan \textit{significance weighting}, RMSE turun dari 0,9659 pada $k=10$ menjadi 0,9536 pada $k=30$, mencapai nilai terendah 0,9533 pada $k=50$, lalu naik sedikit menjadi 0,9551 pada $k=100$. Hasilnya stabil pada rentang $k = 20$ sampai $50$. \textit{Significance weighting} menurunkan RMSE pada semua nilai $k$ yang diuji; pada $k=30$ RMSE turun dari 0,9653 menjadi 0,9536. Nilai $k=30$ ditetapkan dari saran slide perkuliahan (20--50 tetangga) sebelum hasil dilihat, sehingga analisis ini hanya menggambarkan sensitivitas dan tidak dipakai untuk memilih $k$.
+
+Hasil ini menunjukkan bahwa penyesuaian kemiripan berdasarkan jumlah film yang dinilai bersama membantu mengurangi pengaruh tetangga yang korelasinya tinggi tetapi hanya didukung sedikit data.
+
+\subsection{Hasil Rekomendasi Film}
+UBCF juga digunakan untuk menyusun daftar rekomendasi film bagi pengguna 1. Model dilatih dengan seluruh 100.000 rating MovieLens 100K, kemudian memprediksi rating untuk semua film yang belum dinilai pengguna tersebut, dan film dengan prediksi tertinggi dipilih sebagai rekomendasi. Pada tahap ini diterapkan batas minimum dukungan sebanyak lima tetangga, serta penyaringan judul film ganda dan film yang sudah pernah dinilai pengguna. Batas minimum dukungan mengurangi kemunculan film yang prediksinya tinggi tetapi hanya didukung sedikit pengguna. Daftar sepuluh rekomendasi teratas, antara lain \textit{Pather Panchali}, \textit{A Close Shave}, \textit{Casablanca}, dan \textit{Schindler's List}, disajikan bersama hasil kedua metode lain pada Tabel \ref{tab:top10_rekomendasi}.
+
+\subsection{Kendala dan Penyelesaian pada User-Based CF}
+\textbf{Korelasi sempurna dari sedikit data.} Korelasi Pearson dapat menghasilkan kemiripan sempurna meskipun hanya didasarkan pada sedikit film yang dinilai bersama, sehingga tetangga yang terpilih kurang representatif. Pada pengujian awal terhadap pengguna 1, lima pengguna dengan kemiripan tertinggi menurut korelasi Pearson biasa semuanya bernilai 1,0, tetapi hanya didasarkan pada dua sampai tiga film yang sama. Kendala ini diatasi dengan \textit{significance weighting} (Persamaan \ref{eq:sig_weight}). Setelah penyesuaian, tetangga terdekat memiliki korelasi sekitar 0,49--0,58 dengan 49--69 film bersama, sehingga dasar pemilihan tetangga jauh lebih kuat. Pada \textit{fold} 1 dengan $k=30$, MAE turun dari 0,7552 menjadi 0,7416, RMSE turun dari 0,9653 menjadi 0,9536, dan NDCG@10 naik dari 0,8336 menjadi 0,8446.
+
+\textbf{Rekomendasi film yang kurang dikenal.} Tanpa syarat tambahan, daftar rekomendasi pengguna 1 dipenuhi film yang kurang dikenal dengan prediksi rating 5,0 yang hanya didukung oleh satu sampai tiga tetangga. Kendala ini diatasi dengan batas minimum lima tetangga pada saat menyusun rekomendasi. Aturan tersebut hanya diterapkan pada daftar rekomendasi dan tidak pada evaluasi, sehingga seluruh prediksi pada data uji tetap diperhitungkan dalam metrik.
 
 \section{Analisis Kinerja dan Sensitivitas Item-Based CF}
 Hasil evaluasi \textit{Item-Based Collaborative Filtering} (IBCF) menggunakan metrik \textit{Adjusted Cosine Similarity} ($k=30, \gamma=50$) dirangkum pada Tabel \ref{tab:hasil_ibcf}.
@@ -135,6 +221,7 @@ Standar Deviasi (SD) & $\pm$0,0086 & $\pm$0,0207 & $\pm$0,0109 & $\pm$0,0052 & $
 Gambar \ref{fig:ibcf_k} membandingkan empat varian pada fold 1 untuk $k$ = 10, 20, 30, 50, dan 100: \textit{Cosine} biasa dan \textit{Adjusted Cosine}, masing-masing dengan dan tanpa \textit{significance weighting}. \textit{Adjusted Cosine} lebih baik daripada \textit{Cosine} biasa pada semua nilai $k$. Pada $k=30$, RMSE turun dari 1,0508 menjadi 0,9966 (selisih 0,054) dan MAE turun dari 0,8283 menjadi 0,7851 (selisih 0,043). Penambahan \textit{significance weighting} pada \textit{Adjusted Cosine} menurunkan RMSE lagi menjadi 0,9644. Sebaliknya, pada \textit{Cosine} biasa \textit{significance weighting} justru menaikkan RMSE menjadi 1,1003. Dugaan kami, nilai \textit{Cosine} biasa hampir sama untuk semua pasangan film, sehingga setelah dikalikan bobot jumlah pengguna bersama, urutan tetangga lebih ditentukan oleh popularitas film daripada kemiripannya.
 
 \section{Analisis Kinerja dan Konvergensi Matrix Factorization}
+\label{sec:mf}
 Subbab ini membahas \textit{Matrix Factorization} (MF) secara berurutan, mulai dari konsep dasar, langkah implementasi beserta kode, hasil evaluasi 5-\textit{fold}, hingga kendala yang dihadapi dan penyelesaiannya.
 
 \subsection{Konsep dan Ide Dasar}
@@ -303,6 +390,7 @@ Selama pengerjaan, beberapa kendala ditemui pada metode MF. Ringkasannya disajik
 \textbf{Risiko memilih parameter dengan data uji.} Jika $K$, $\beta$, atau jumlah \textit{epoch} dipilih berdasarkan nilai terbaik pada data uji, hasil evaluasi akan tampak lebih baik daripada kenyataan karena data uji sudah ``diintip'' (\textit{data leakage}). Untuk menghindarinya, seluruh pemilihan parameter MF dilakukan dengan data validasi yang dipisahkan dari data latih \textit{fold} 1, sedangkan data uji baru dipakai pada evaluasi akhir. Konfigurasi hasil pemilihan tersebut kemudian dipakai tanpa diubah pada kelima \textit{fold}.
 
 \section{Perbandingan Komprehensif Antar-Metode}
+\label{sec:perbandingan}
 Rekapitulasi performa seluruh model \textit{baseline} dan metode rekomendasi utama dirangkum pada Tabel \ref{tab:perbandingan_komprehensif}.
 
 \begin{table}[htbp]

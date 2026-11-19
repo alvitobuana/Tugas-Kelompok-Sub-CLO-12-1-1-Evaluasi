@@ -22,7 +22,7 @@ Data anggota kelompok: lihat [README.md](README.md).
 | Perbandingan akhir ketiga metode | Selesai (9 Nov 2026), `notebooks/05_perbandingan.ipynb` |
 | Repo GitHub + README | Push pertama 9 Nov 2026 (UBCF, IBCF, kode MF); repo: github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi |
 | Share repo ke dosen | Repo dibiarkan public (keputusan 9 Nov 2026), jadi dosen bisa membuka link tanpa undangan |
-| Laporan PDF | Selesai, `laporan/main.pdf` (LaTeX, 47 halaman); angka dicocokkan ulang dengan notebook dan `results/` pada 16 Nov 2026; link repo dan potongan kode (subbab 3.6) ditambahkan 19 Nov 2026 |
+| Laporan PDF | Selesai, `laporan/main.pdf` (LaTeX, 61 halaman); angka dicocokkan ulang dengan notebook dan `results/` pada 16 Nov 2026; link repo dan potongan kode (subbab 3.6) ditambahkan 19 Nov 2026 |
 | Konsolidasi notebook | Notebook 01–05 digabung menjadi `notebooks/Evaluasi_RecSys_CF_MF.ipynb`; rujukan ke notebook 01–05 dan nama grafik lama di bawah adalah catatan historis |
 
 ---
@@ -600,6 +600,31 @@ PDF: tidak ada link GitHub, dan kesebelas gambar di laporan semuanya grafik hasi
   diklik. Satu peringatan *overfull* tersisa berasal dari judul subbab 4.7 yang sudah ada sebelumnya.
 - `.gitignore` kembali mengecualikan `info_kelompok.md` (aturannya sempat terhapus saat `.gitignore` ditulis
   ulang).
+
+---
+
+## 2026-11-19 (malam) — Menyatukan bagian UBCF (Zweta) dan MF (Laili) ke laporan
+
+**Kondisi awal:** Laili memperluas subbab 4.5 (MF) langsung di LaTeX, tetapi enam gambar kodenya tidak ikut
+di-push sehingga laporan tidak bisa dikompilasi. Zweta menulis bab UBCF sebagai PDF terpisah
+(`laporan/User-Based CF.pdf`). Kode UBCF dan MF juga muncul dua kali (subbab 3.6 dan bab IV).
+
+**Yang dilakukan:**
+- **4.3 UBCF** ditulis ulang dengan pola yang sama seperti 4.5: konsep, langkah implementasi beserta kode,
+  verifikasi Alice, hasil 5-fold, sensitivitas k, rekomendasi, serta kendala dan penyelesaian. Teks diambil
+  dari tulisan Zweta. Gambar kode memakai versi terang beresolusi tinggi (sama seperti gambar kode lain),
+  ditambah gambar baru `fig_kode_ubcf_fit.png` untuk significance weighting. Gambar verifikasi Alice memakai
+  screenshot asli Zweta (`fig_ubcf_verifikasi_alice.png`).
+- **Enam gambar MF** yang dirujuk teks Laili dibuat dari kode sumber dan output notebook yang tersimpan:
+  `fig_mf_kode_matriks` (`src/data.py` 129–138), `fig_mf_kode_inisialisasi` (`src/mf.py` 44–53),
+  `fig_mf_kode_sgd` (`src/mf.py` 55–86), `fig_mf_kode_prediksi` (`src/mf.py` 92–110),
+  `fig_mf_kode_verifikasi` dan `fig_mf_kode_tuning` (sel 25 dan 26 notebook gabungan beserta output aslinya).
+- **3.6** dirampingkan: kode UBCF dan MF dihapus dari sana (merujuk ke 4.3 dan 4.5), tersisa link repository,
+  kode IBCF, dan kode metrik. `figures/fig_kode_mf_sgd.png` dihapus karena tidak dipakai lagi.
+- Label `sec:ubcf`, `sec:mf`, `sec:perbandingan` ditambahkan; `\emergencystretch` ditambahkan di `main.tex`
+  agar nama kode yang panjang tidak melewati margin (peringatan overfull turun dari 6 menjadi 1).
+
+**Hasil kompilasi:** 61 halaman, tanpa referensi atau sitasi yang rusak.
 
 ---
 

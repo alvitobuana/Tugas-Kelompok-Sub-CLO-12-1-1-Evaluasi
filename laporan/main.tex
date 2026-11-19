@@ -33,6 +33,9 @@
 % Path direktori gambar
 \graphicspath{{figures/}{../figures/}{./}}
 
+% Kelonggaran spasi agar nama kode (\texttt) yang panjang tidak melewati margin
+\setlength{\emergencystretch}{3em}
+
 \makeatletter
 \patchcmd{\ttlh@hang}{\parindent\z@}{\parindent\z@\leavevmode}{}{}
 \patchcmd{\ttlh@hang}{\noindent}{}{}{}

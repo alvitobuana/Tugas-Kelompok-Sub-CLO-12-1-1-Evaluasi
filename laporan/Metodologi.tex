@@ -143,31 +143,7 @@ Seluruh kode sumber, \textit{notebook}, dan hasil eksperimen tersedia pada repos
 \begin{center}
 {\footnotesize\url{https://github.com/alvitobuana/Tugas-Kelompok-Sub-CLO-12-1-1-Evaluasi}}
 \end{center}
-Rumus setiap metode ditulis pada modul Python di direktori \texttt{src/}, yaitu \texttt{ubcf.py}, \texttt{ibcf.py}, \texttt{mf.py}, dan \texttt{metrics.py}, sedangkan \textit{notebook} hanya memanggil modul tersebut. Dengan susunan ini, rumus yang sama dipakai oleh \textit{notebook} dan oleh pengujian otomatis pada direktori \texttt{tests/}. Potongan kode berikut diambil langsung dari modul tersebut, dan nomor baris pada setiap gambar sesuai dengan nomor baris pada berkas aslinya.
-
-\subsection{Kemiripan Antar-Pengguna pada User-Based CF}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_pearson.png}
-\caption{Potongan kode perhitungan korelasi Pearson antar-pengguna (\texttt{src/ubcf.py})}
-\label{fig:kode_ubcf_pearson}
-\end{figure}
-
-Gambar \ref{fig:kode_ubcf_pearson} menunjukkan fungsi \texttt{pearson\_similarity} yang menghitung korelasi Pearson untuk semua pasangan pengguna sekaligus. Baris 27 membentuk matriks penanda $M$ yang bernilai 1 jika pengguna memberi rating pada suatu film dan 0 jika tidak, sedangkan baris 28 mengisi rating yang kosong dengan 0 agar tidak ikut terjumlahkan. Dengan perkalian matriks pada baris 31--36, diperoleh jumlah film yang dirating bersama ($n$), jumlah rating, jumlah kuadrat rating, dan jumlah hasil kali rating untuk setiap pasangan pengguna, tetapi hanya pada film yang dirating oleh keduanya. Baris 39--42 kemudian menghitung kovarians dan variansi lalu membaginya sehingga diperoleh korelasi Pearson. Pasangan yang hanya memiliki kurang dari dua film yang sama diberi nilai 0 (baris 46), karena korelasi tidak dapat dihitung dari satu titik data, dan seorang pengguna tidak dihitung sebagai tetangga bagi dirinya sendiri (baris 47). Cara perkalian matriks ini memberikan hasil yang sama dengan rumus Pearson pada slide, yang dibuktikan oleh pengujian dengan contoh Alice (0,85; 0,70; 0,00; $-$0,79).
-
-\subsection{Prediksi Rating pada User-Based CF}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{fig_kode_ubcf_prediksi.png}
-\caption[Potongan kode prediksi rating User-Based CF]{Potongan kode pemilihan tetangga dan prediksi rating User-Based CF (\texttt{src/ubcf.py})}
-\label{fig:kode_ubcf_prediksi}
-\end{figure}
-
-Gambar \ref{fig:kode_ubcf_prediksi} memperlihatkan dua tahap prediksi. Fungsi \texttt{neighbors} mengambil semua pengguna yang sudah merating film $i$ (baris 83), membuang pengguna dengan kemiripan tidak positif (baris 85--86), lalu memilih $k$ pengguna dengan kemiripan tertinggi (baris 87--89). Fungsi \texttt{predict} kemudian menghitung prediksi pada baris 98 sesuai rumus
-\begin{equation*}
-\hat{r}_{a,i} = \bar{r}_a + \frac{\sum_{b \in N} sim(a,b)\,(r_{b,i} - \bar{r}_b)}{\sum_{b \in N} sim(a,b)},
-\end{equation*}
-yaitu rata-rata rating pengguna aktif ditambah rata-rata tertimbang selisih rating para tetangga terhadap kebiasaan mereka masing-masing. Nilai \texttt{self.dev} berisi selisih $r_{b,i} - \bar{r}_b$ yang sudah dihitung sebelumnya. Jika tidak ada tetangga yang memenuhi syarat, prediksi memakai rata-rata rating pengguna (baris 95--96), dan hasil akhir dibatasi ke rentang 1--5 (baris 99).
+Rumus setiap metode ditulis pada modul Python di direktori \texttt{src/}, yaitu \texttt{ubcf.py}, \texttt{ibcf.py}, \texttt{mf.py}, dan \texttt{metrics.py}, sedangkan \textit{notebook} hanya memanggil modul tersebut. Dengan susunan ini, rumus yang sama dipakai oleh \textit{notebook} dan oleh pengujian otomatis pada direktori \texttt{tests/}. Potongan kode diambil langsung dari modul tersebut, dan nomor baris pada setiap gambar sesuai dengan nomor baris pada berkas aslinya. Potongan kode \textit{User-Based CF} dan \textit{Matrix Factorization} dibahas bersama langkah implementasinya pada Subbab \ref{sec:ubcf} dan \ref{sec:mf}, sedangkan subbab ini memuat potongan kode \textit{Item-Based CF} dan metrik evaluasi.
 
 \subsection{Kemiripan Antar-Film pada Item-Based CF}
 \begin{figure}[htbp]
@@ -192,20 +168,6 @@ Pada Gambar \ref{fig:kode_ibcf_prediksi}, fungsi \texttt{neighbors} mengambil fi
 \hat{r}_{u,p} = \frac{\sum_{i \in N} sim(i,p)\, r_{u,i}}{\sum_{i \in N} sim(i,p)},
 \end{equation*}
 sesuai rumus pada slide Item-Based CF. Jika tidak ada film mirip yang pernah dirating pengguna, misalnya film yang tidak muncul pada data latih, prediksi memakai rata-rata rating pengguna (baris 88--91).
-
-\subsection{Pelatihan Matrix Factorization dengan SGD}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{fig_kode_mf_sgd.png}
-\caption[Potongan kode pelatihan Matrix Factorization dengan SGD]{Potongan kode pelatihan Matrix Factorization dengan Stochastic Gradient Descent (\texttt{src/mf.py})}
-\label{fig:kode_mf_sgd}
-\end{figure}
-
-Gambar \ref{fig:kode_mf_sgd} menunjukkan fungsi \texttt{fit} yang melatih matriks $P$ (pengguna $\times$ $K$) dan $Q$ (film $\times$ $K$). Baris 62--63 mengambil seluruh pasangan pengguna--film yang memiliki rating, dan baris 67 mengisi $P$ serta $Q$ dengan nilai acak awal. Setiap epoch, urutan rating diacak (baris 73), yang menjadi sifat \textit{stochastic} pada SGD. Untuk setiap rating, baris 76 menghitung galat $e_{ij} = r_{ij} - p_i \cdot q_j$, lalu baris 77--78 memperbarui vektor pengguna dan vektor film dengan aturan yang sama seperti pada slide Matrix Factorization:
-\begin{equation*}
-p_i \leftarrow p_i + \alpha\,(2\,e_{ij}\,q_j - \beta\,p_i), \qquad q_j \leftarrow q_j + \alpha\,(2\,e_{ij}\,p_i - \beta\,q_j).
-\end{equation*}
-Nilai lama $p_i$ dan $q_j$ disalin terlebih dahulu pada baris 75 sehingga kedua vektor diperbarui secara serentak dari titik yang sama. Di akhir setiap epoch, RMSE data latih dan data validasi dicatat (baris 79--83). Catatan inilah yang dipakai untuk menggambar kurva belajar dan memilih jumlah epoch tanpa menyentuh data uji.
 
 \subsection{Metrik NMSE dan NDCG}
 \begin{figure}[htbp]
